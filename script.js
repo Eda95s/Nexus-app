@@ -251,3 +251,43 @@ function toggleHaptic() { hapticEnabled = !hapticEnabled; localStorage.setItem('
 function saveData() { localStorage.setItem('nexus_bal', balance); localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades)); }
 
 updateUI();
+// Инициализация Telegram WebApp
+const tg = window.Telegram.WebApp;
+tg.expand(); // Разворачиваем приложение на весь экран
+
+const user = tg.initDataUnsafe?.user;
+const username = user ? user.first_name : "User";
+const userId = user ? user.id : null;
+
+// Переменные игры
+let balance = parseInt(localStorage.getItem('nexus_balance')) || 0;
+
+// Функция для начисления бонуса за подписку
+async function checkSubscription() {
+    const channelUsername = "@NEXUS_PROTOCOL"; // Твой канал из скрина
+    
+    // ВАЖНО: На реальном сервере здесь будет запрос к API бота.
+    // Пока мы делаем имитацию проверки для интерфейса.
+    
+    alert(`${username}, проверяем твою подписку на ${channelUsername}...`);
+    
+    // Имитация успешной проверки (завтра привяжем к боту на сервере)
+    setTimeout(() => {
+        const bonus = 50000;
+        balance += bonus;
+        updateDisplay();
+        localStorage.setItem('nexus_balance', balance);
+        alert(`Успех! Тебе начислено ${bonus} NEX за подписку.`);
+    }, 2000);
+}
+
+function updateDisplay() {
+    const balanceElement = document.getElementById('balance');
+    if (balanceElement) {
+        balanceElement.innerText = balance.toLocaleString();
+    }
+}
+
+// Вызываем обновление при загрузке
+updateDisplay();
+
