@@ -1,3 +1,6 @@
+const username = tg.initDataUnsafe?.user?.first_name || "MINER";
+document.getElementById('player-display-name').innerText = username.toUpperCase();
+
 const tg = window.Telegram.WebApp;
 tg.expand();
 
