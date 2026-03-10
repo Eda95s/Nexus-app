@@ -1,6 +1,11 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
+// Получаем данные пользователя из Telegram
+const user = tg.initDataUnsafe?.user;
+const username = user ? user.first_name : "Игрок";
+const userId = user ? user.id : null;
+
 // --- ДАННЫЕ (СОСТОЯНИЕ) ---
 let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
 let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
@@ -14,7 +19,7 @@ let isOverdrive = false;
 let currentLang = localStorage.getItem('nx_lang') || 'EN';
 let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
 
-// --- ЛОКАЛИЗАЦИЯ (ПОЛНАЯ) ---
+// --- ЛОКАЛИЗАЦИЯ ---
 const langMap = {
     EN: {
         mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
@@ -34,79 +39,34 @@ const langMap = {
 function updateUI() {
     const L = langMap[currentLang];
     
-    document.getElementById('nav-mining').querySelector('span').innerText = L.mining;
-    document.getElementById('nav-market').querySelector('span').innerText = L.market;
-    document.getElementById('nav-tasks').querySelector('span').innerText = L.tasks;
-    document.getElementById('lbl-energy').innerText = L.energy;
-    document.getElementById('lbl-sync').innerText = L.overdrive;
-    document.getElementById('m-sys-title').innerText = L.sys;
-    document.getElementById('lbl-lang').innerText = L.lang;
-    document.getElementById('lbl-haptic').innerText = L.haptic;
-    document.getElementById('m-market-title').innerText = L.market;
-    document.getElementById('m-tasks-title').innerText = L.tasks;
-    document.getElementById('m-rank-title').innerText = L.top;
-    
-    document.querySelectorAll('.close-btn-nexus').forEach(b => b.innerText = L.close);
-    document.getElementById('lang-btn').innerText = currentLang;
-    document.getElementById('haptic-btn').innerText = hapticEnabled ? "ON" : "OFF";
-
     document.getElementById('balance-value').innerText = Math.floor(balance).toLocaleString();
     document.getElementById('energy-fill').style.width = (energy / 10) + "%";
     document.getElementById('boost-fill').style.width = odCharge + "%";
 
-    const btn = document.getElementById('od-btn');
-    if (isOverdrive) btn.innerText = "OVERDRIVE!!";
-    else if (odCharge >= 100) btn.innerText = L.ready;
-    else btn.innerText = `${L.loading} ${Math.floor(odCharge)}%`;
-    btn.className = `sync-btn ${odCharge >= 100 ? 'ready' : ''} ${isOverdrive ? 'active' : ''}`;
-
-    let r = "IRON";
-    if (balance > 100000) r = "BRONZE 🥉";
-    if (balance > 500000) r = "SILVER 🥈";
-    if (balance > 2000000) r = "GOLD 🥇";
-    if (balance > 10000000) r = "PLATINUM 💎";
-    document.getElementById('rank-badge').innerText = r;
+    // Обновление текстов навигации
+    const navMining = document.getElementById('nav-mining');
+    if (navMining) navMining.querySelector('span').innerText = L.mining;
+    
+    // Ранги (от Newbie до Nexus Whale)
+    let r = "NEWBIE";
+    if (balance > 50000) r = "NODE OPERATOR";
+    if (balance > 500000) r = "SYSTEM ARCHITECT";
+    if (balance > 1000000) r = "NEXUS WHALE 🐋";
+    
+    const rankBadge = document.getElementById('rank-badge');
+    if (rankBadge) rankBadge.innerText = r;
 
     renderMarket();
     renderTasks();
 }
 
-// --- МАГАЗИН (STARS + NORMAL) ---
+// --- МАГАЗИН ---
 function renderMarket() {
     const L = langMap[currentLang];
     const grid = document.getElementById('market-grid');
-    
-    // Определяем тексты для премиум-товаров в зависимости от языка
-    const premiumTexts = {
-        mult: currentLang === 'RU' ? 
-            { title: "МНОЖИТЕЛЬ X2 💎", desc: "ПОСТОЯННАЯ ДВОЙНАЯ СИЛА" } : 
-            { title: "X2 MULTIPLIER 💎", desc: "PERMANENT DOUBLE TAP" },
-        speed: currentLang === 'RU' ? 
-            { title: "КИБЕР-СКОРОСТЬ ⚡️", desc: "X2 РЕГЕНЕРАЦИЯ ЭНЕРГИИ" } : 
-            { title: "CYBER SPEED ⚡️", desc: "X2 ENERGY REGEN" }
-    };
+    if (!grid) return;
 
     grid.innerHTML = `
-        <div class="card-nexus">
-            <div class="card-info">
-                <span class="card-title">${premiumTexts.mult.title}</span>
-                <span class="card-sub">${premiumTexts.mult.desc}</span>
-                <span class="card-price">50 ⭐️</span>
-            </div>
-            <button class="nexus-btn-buy" onclick="buyWithStars('mult', 50)">${L.buyStars}</button>
-        </div>
-
-        <div class="card-nexus">
-            <div class="card-info">
-                <span class="card-title">${premiumTexts.speed.title}</span>
-                <span class="card-sub">${premiumTexts.speed.desc}</span>
-                <span class="card-price">100 ⭐️</span>
-            </div>
-            <button class="nexus-btn-buy" onclick="buyWithStars('speed', 100)">${L.buyStars}</button>
-        </div>
-
-        <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 15px 0;">
-
         <div class="card-nexus">
             <div class="card-info">
                 <span class="card-title">NODE v.${upgrades.node.lvl}</span>
@@ -115,7 +75,6 @@ function renderMarket() {
             </div>
             <button class="nexus-btn-buy" onclick="buyItem('node')">${L.buy}</button>
         </div>
-
         <div class="card-nexus">
             <div class="card-info">
                 <span class="card-title">VPN v.${upgrades.vpn.lvl}</span>
@@ -127,167 +86,99 @@ function renderMarket() {
     `;
 }
 
-
-// --- СИСТЕМА ЗАДАНИЙ ---
+// --- ЗАДАНИЯ С ПРОВЕРКОЙ ---
 function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
+    if (!grid) return;
+
     const tasks = [
         { id: 'sub1', title: L.task1, reward: 50000 },
-        { id: 'invite', title: L.task2, reward: 150000 },
-        { id: 'reach100k', title: L.task3, reward: 250000 }
+        { id: 'invite', title: L.task2, reward: 150000 }
     ];
+
     grid.innerHTML = "";
     tasks.forEach(task => {
         const isDone = tasksDone.includes(task.id);
         grid.innerHTML += `
             <div class="card-nexus">
-                <div class="card-info"><span class="card-title">${task.title}</span><span class="card-sub">+${task.reward.toLocaleString()} N</span></div>
-                <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} onclick="completeTask('${task.id}', ${task.reward})">${isDone ? L.claimed : L.claim}</button>
+                <div class="card-info">
+                    <span class="card-title">${task.title}</span>
+                    <span class="card-sub">+${task.reward.toLocaleString()} N</span>
+                </div>
+                <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} 
+                    onclick="handleTask('${task.id}', ${task.reward})">
+                    ${isDone ? L.claimed : L.claim}
+                </button>
             </div>
         `;
     });
 }
 
-// --- РЕЙТИНГ (ЧЕСТНЫЙ) ---
-function openRanks() {
-    const c = document.getElementById('rank-list-container');
-    let players = [
-        { name: "YOU", balance: balance, me: true },
-        { name: "Nexus_User_77", balance: 850400 },
-        { name: "AlphaMiner", balance: 125000 }
-    ];
-    players.sort((a, b) => b.balance - a.balance);
-    c.innerHTML = "";
-    players.forEach((p, i) => {
-        c.innerHTML += `<div class="rank-item ${p.me ? 'active-rank' : ''}"><span>${i + 1}</span><b>${p.name}</b><span>${Math.floor(p.balance).toLocaleString()} N</span></div>`;
-    });
-    toggleModal('rank-modal');
-}
-
-// --- ЛОГИКА ОПЛАТЫ STARS ---
-function buyWithStars(type, price) {
-    if(confirm(`Confirm purchase for ${price} ⭐️?`)) {
-        if(type === 'mult') { upgrades.node.power *= 2; alert("X2 Activated!"); }
-        if(type === 'speed') { alert("Regen Speed Upgraded!"); }
-        saveData(); updateUI();
-    }
-}
-
-// --- КЛИКЕР И ЭФФЕКТЫ ---
-document.getElementById('touch-zone').addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if (energy < 2) return;
-    document.getElementById('coin-visual').classList.add('pressed');
-    for (let i = 0; i < e.changedTouches.length; i++) {
-        let t = e.changedTouches[i];
-        let pwr = upgrades.node.lvl * upgrades.node.power * (isOverdrive ? 5 : 1);
-        balance += pwr; energy -= 2;
-        if (!isOverdrive && odCharge < 100) odCharge += 0.4;
-        createPop(t.clientX, t.clientY, pwr);
-        spawnParticles(t.clientX, t.clientY);
-    }
-    if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
-    saveData(); updateUI();
-});
-
-document.getElementById('touch-zone').addEventListener('touchend', () => document.getElementById('coin-visual').classList.remove('pressed'));
-
-function createPop(x, y, v) {
-    const p = document.createElement('div'); p.className = 'floating-text';
-    p.innerText = '+' + v; p.style.left = x + 'px'; p.style.top = y + 'px';
-    document.body.appendChild(p); setTimeout(() => p.remove(), 600);
-}
-
-function spawnParticles(x, y) {
-    for (let i = 0; i < 6; i++) {
-        const p = document.createElement('div'); p.className = 'particle';
-        p.style.left = x + 'px'; p.style.top = y + 'px';
-        const a = Math.random() * Math.PI * 2; const d = 30 + Math.random() * 40;
-        p.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity: 0 }], { duration: 500 });
-        document.body.appendChild(p); setTimeout(() => p.remove(), 500);
-    }
-}
-
-function activateOverdrive() {
-    if (odCharge >= 100 && !isOverdrive) {
-        isOverdrive = true; document.body.classList.add('overdrive-active');
-        let t = setInterval(() => {
-            odCharge -= 1.5; updateUI();
-            if (odCharge <= 0) { clearInterval(t); isOverdrive = false; document.body.classList.remove('overdrive-active'); odCharge = 0; updateUI(); }
-        }, 100);
-    }
-}
-
-function buyItem(type) {
-    let u = upgrades[type];
-    if (balance >= u.cost) {
-        balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
-        saveData(); updateUI(); tg.HapticFeedback.notificationOccurred('success');
+function handleTask(id, reward) {
+    if (id === 'sub1') {
+        alert(`${username}, проверяем подписку на @NEXUS_PROTOCOL...`);
+        // Имитация проверки
+        setTimeout(() => {
+            completeTask(id, reward);
+            alert("Бонус начислен!");
+        }, 1500);
+    } else {
+        completeTask(id, reward);
     }
 }
 
 function completeTask(id, reward) {
     if (!tasksDone.includes(id)) {
-        balance += reward; tasksDone.push(id);
+        balance += reward;
+        tasksDone.push(id);
         localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-        tg.HapticFeedback.notificationOccurred('success'); updateUI();
+        if (hapticEnabled) tg.HapticFeedback.notificationOccurred('success');
+        saveData();
+        updateUI();
     }
 }
 
+// --- ЛОГИКА КЛИКА ---
+const touchZone = document.getElementById('touch-zone');
+if (touchZone) {
+    touchZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (energy < 2) return;
+        
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            let pwr = upgrades.node.lvl * (isOverdrive ? 5 : 1);
+            balance += pwr;
+            energy -= 2;
+            if (!isOverdrive && odCharge < 100) odCharge += 0.4;
+        }
+        if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+        saveData();
+        updateUI();
+    });
+}
+
+function buyItem(type) {
+    let u = upgrades[type];
+    if (balance >= u.cost) {
+        balance -= u.cost;
+        u.lvl++;
+        u.cost = Math.floor(u.cost * 1.7);
+        saveData();
+        updateUI();
+    }
+}
+
+function saveData() {
+    localStorage.setItem('nexus_bal', balance);
+    localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
+}
+
+// Запуск
 setInterval(() => {
     if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
-    if (energy < 1000) energy += 2.5; // Чуть быстрее реген
+    if (energy < 1000) energy += 2.5;
     updateUI();
 }, 100);
 
-function toggleModal(id) {
-    const m = document.getElementById(id);
-    m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-}
-
-function changeLanguage() { currentLang = currentLang === 'EN' ? 'RU' : 'EN'; localStorage.setItem('nx_lang', currentLang); updateUI(); }
-function toggleHaptic() { hapticEnabled = !hapticEnabled; localStorage.setItem('nx_haptic', hapticEnabled?'off':'on'); updateUI(); }
-function saveData() { localStorage.setItem('nexus_bal', balance); localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades)); }
-
 updateUI();
-// Инициализация Telegram WebApp
-const tg = window.Telegram.WebApp;
-tg.expand(); // Разворачиваем приложение на весь экран
-
-const user = tg.initDataUnsafe?.user;
-const username = user ? user.first_name : "User";
-const userId = user ? user.id : null;
-
-// Переменные игры
-let balance = parseInt(localStorage.getItem('nexus_balance')) || 0;
-
-// Функция для начисления бонуса за подписку
-async function checkSubscription() {
-    const channelUsername = "@NEXUS_PROTOCOL"; // Твой канал из скрина
-    
-    // ВАЖНО: На реальном сервере здесь будет запрос к API бота.
-    // Пока мы делаем имитацию проверки для интерфейса.
-    
-    alert(`${username}, проверяем твою подписку на ${channelUsername}...`);
-    
-    // Имитация успешной проверки (завтра привяжем к боту на сервере)
-    setTimeout(() => {
-        const bonus = 50000;
-        balance += bonus;
-        updateDisplay();
-        localStorage.setItem('nexus_balance', balance);
-        alert(`Успех! Тебе начислено ${bonus} NEX за подписку.`);
-    }, 2000);
-}
-
-function updateDisplay() {
-    const balanceElement = document.getElementById('balance');
-    if (balanceElement) {
-        balanceElement.innerText = balance.toLocaleString();
-    }
-}
-
-// Вызываем обновление при загрузке
-updateDisplay();
-
