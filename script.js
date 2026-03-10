@@ -151,19 +151,27 @@ function renderTasks() {
 
 // --- РЕЙТИНГ (ЧЕСТНЫЙ) ---
 function openRanks() {
-    const c = document.getElementById('rank-list-container');
-    let players = [
-        { name: "YOU", balance: balance, me: true },
-        { name: "Nexus_User_77", balance: 850400 },
-        { name: "AlphaMiner", balance: 125000 }
-    ];
-    players.sort((a, b) => b.balance - a.balance);
-    c.innerHTML = "";
-    players.forEach((p, i) => {
-        c.innerHTML += `<div class="rank-item ${p.me ? 'active-rank' : ''}"><span>${i + 1}</span><b>${p.name}</b><span>${Math.floor(p.balance).toLocaleString()} N</span></div>`;
-    });
     toggleModal('rank-modal');
+    const container = document.getElementById('rank-list-container');
+    const L = langMap[currentLang];
+    
+    // В будущем здесь будет запрос к базе данных. 
+    // Сейчас показываем тебя как лидера, чтобы проверить работу интерфейса.
+    const leaderData = [
+        { name: username, bal: balance, sub: true, isMe: true }
+    ];
+
+    container.innerHTML = leaderData.map((player, index) => `
+        <div class="rank-item ${player.isMe ? 'active-rank' : ''}">
+            <div class="rank-num">#${index + 1}</div>
+            <div class="rank-info">
+                <div class="rank-name">${player.name} ${player.sub ? '✅' : ''}</div>
+                <div class="rank-val">${Math.floor(player.bal).toLocaleString()} NEX</div>
+            </div>
+        </div>
+    `).join('');
 }
+
 
 // --- ЛОГИКА ОПЛАТЫ STARS ---
 function buyWithStars(type, price) {
