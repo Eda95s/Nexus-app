@@ -1,5 +1,15 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
+// Получаем данные пользователя
+const user = tg.initDataUnsafe?.user;
+
+// Функция для отображения имени (выполнится при загрузке страницы)
+window.addEventListener('load', () => {
+    const userNameElement = document.getElementById('user-name');
+    if (userNameElement && user) {
+        userNameElement.innerText = user.first_name;
+    }
+});
 
 // --- ДАННЫЕ (СОСТОЯНИЕ) ---
 let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
