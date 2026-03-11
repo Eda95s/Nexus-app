@@ -246,7 +246,7 @@ function completeTask(id, reward) {
 
     // 2. Логика переходов по ссылкам
     if (id === 'sub1') {
-        tg.openTelegramLink('https://t.me/твой_канал'); // ЗАМЕНИ НА СВОЮ ССЫЛКУ
+        tg.openTelegramLink('https://t.me/nexus_protocol'); // ЗАМЕНИ НА СВОЮ ССЫЛКУ
     } else if (id === 'invite') {
         const inviteLink = `https://t.me/твой_бот?start=${user?.id || '123'}`;
         tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
