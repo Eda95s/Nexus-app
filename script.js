@@ -68,16 +68,16 @@ function updateUI() {
     btn.className = `sync-btn ${odCharge >= 100 ? 'ready' : ''} ${isOverdrive ? 'active' : ''}`;
 
         // СТАЛО (не шевелится):
-    let newRank = "IRON";
+        let newRank = "IRON";
     if (balance > 100000) newRank = "BRONZE 🥉";
     if (balance > 500000) newRank = "SILVER 🥈";
     if (balance > 2000000) newRank = "GOLD 🥇";
     if (balance > 10000000) newRank = "PLATINUM 💎";
 
-    const rankElement = document.getElementById('rank-badge');
-    // Обновляем текст ТОЛЬКО если название ранга изменилось
-    if (rankElement && rankElement.innerText !== newRank) {
-        rankElement.innerText = newRank;
+    const rankBadge = document.getElementById('rank-badge');
+    // Обновляем, ТОЛЬКО если ранг реально изменился
+    if (rankBadge && rankBadge.innerText !== newRank) {
+        rankBadge.innerText = newRank;
     }
 
     renderMarket();
