@@ -163,22 +163,27 @@ function renderTasks() {
 }
 
 // --- РЕЙТИНГ (ЧЕСТНЫЙ) ---
+
 function openRanks() {
     const c = document.getElementById('rank-list-container');
     
-    // Заменяем "YOU" на данные из Telegram
+    // В списке только ты. Когда будет база данных, сюда будут прилетать другие игроки.
     let players = [
-        { name: user?.first_name?.toUpperCase() || "YOU", balance: balance, me: true },
-        { name: "Nexus_User_77", balance: 850400 },
-        { name: "AlphaMiner", balance: 125000 }
+        { name: user?.first_name?.toUpperCase() || "YOU", balance: balance, me: true }
     ];
     
+    // Сортировка по балансу (будет работать, когда игроков станет много)
     players.sort((a, b) => b.balance - a.balance);
+    
     c.innerHTML = "";
-    // Дальше твой код без изменений...
     players.forEach((p, i) => {
-        c.innerHTML += `<div class="rank-item ${p.me ? 'active-rank' : ''}"><span>${i + 1}</span><b>${p.name}</b><span>${Math.floor(p.balance).toLocaleString()} N</span></div>`;
+        c.innerHTML += `<div class="rank-item ${p.me ? 'active-rank' : ''}">
+            <span>${i + 1}</span>
+            <b>${p.name}</b>
+            <span>${Math.floor(p.balance).toLocaleString()} N</span>
+        </div>`;
     });
+    
     toggleModal('rank-modal');
 }
 
