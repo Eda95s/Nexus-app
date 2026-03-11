@@ -1,31 +1,24 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
-// ВРЕМЕННО: Очистка памяти для теста в Telegram
-localStorage.removeItem('nexus_tasks');
-tasksDone = []; 
 
-// Получаем данные пользователя
 const user = tg.initDataUnsafe?.user;
 
-// Функция для отображения имени (выполнится при загрузке страницы)
-window.addEventListener('load', () => {
-    const userNameElement = document.getElementById('user-name');
-    if (userNameElement && user) {
-        userNameElement.innerText = user.first_name;
-    }
-});
+// ... (код с window.addEventListener оставляем) ...
 
 // --- ДАННЫЕ (СОСТОЯНИЕ) ---
-let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
+let balance = parseInt(localStorage.getItem('nexus_balance')) || 0;
 let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
     node: { lvl: 1, cost: 1000, power: 1 },
     vpn: { lvl: 0, cost: 3240, income: 1 }
 };
+
+// 1. Сначала создаем переменную
 let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
-let energy = 1000;
-let odCharge = 0;
-let isOverdrive = false;
-let currentLang = localStorage.getItem('nx_lang') || 'EN';
+
+// 2. А теперь ПРИНУДИТЕЛЬНО ОЧИЩАЕМ ЕЁ (вставь это СЮДА)
+tasksDone = []; 
+localStorage.removeItem('nexus_tasks');
+
 let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
 
 // --- ЛОКАЛИЗАЦИЯ (ПОЛНАЯ) ---
