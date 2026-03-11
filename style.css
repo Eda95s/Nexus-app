@@ -12,7 +12,7 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 /* Кнопки управления */
 .top-controls { 
     position: absolute; 
-    top: 20px; /* Было 60px, подняли выше к самому краю */
+    top: 20px; /* Мы подняли их здесь, чтобы не мешали балансу */
     left: 0;
     right: 0;
     display: flex;
@@ -22,7 +22,10 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
     box-sizing: border-box;
     z-index: 100;
 }
-.control-btn:active { transform: scale(0.9); background: var(--cyan); color: #000; }
+
+/* Твоя 25-я строчка, которую нельзя терять: */
+.control-btn:active { transform: scale(0.9); opacity: 0.8; }
+
 
 /* Верхняя инфо-панель */
 .header-section { margin-top: 70px; text-align: center; }
