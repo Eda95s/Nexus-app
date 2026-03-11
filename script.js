@@ -8,11 +8,10 @@ let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
     vpn: { lvl: 0, cost: 3240, income: 1 }
 };
 
-// 1. Создаем переменную для заданий
+// Исправлено: Сначала инициализируем, потом чистим для теста
 let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
 
-// 2. ВРЕМЕННАЯ ОЧИСТКА (Чтобы кнопки "отвисли" в Telegram)
-// Как только увидишь синие кнопки - удали эти 2 строки ниже!
+// ВРЕМЕННО: Очистка для Telegram (удалить после проверки!)
 localStorage.removeItem('nexus_tasks');
 tasksDone = [];
 
@@ -20,29 +19,74 @@ let energy = 1000;
 let odCharge = 0;
 let isOverdrive = false;
 let currentLang = localStorage.getItem('nx_lang') || 'EN';
+let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
 
-// Отображение имени пользователя
 const user = tg.initDataUnsafe?.user;
-window.addEventListener('load', () => {
-    const nameBox = document.getElementById('user-name');
-    if (nameBox && user) {
-        nameBox.innerText = `NEX | ${user.first_name.toUpperCase()}`;
-    }
-});
 
 // --- ЛОКАЛИЗАЦИЯ ---
 const langMap = {
     EN: {
-        tasks: "TASKS", claim: "CLAIM", claimed: "DONE",
-        task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS"
+        mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
+        sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "LOADING", ready: "READY!",
+        buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
+        task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyStars: "BUY FOR ⭐️"
     },
     RU: {
-        tasks: "ЗАДАНИЯ", claim: "ВЫПОЛНИТЬ", claimed: "ГОТОВО",
-        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ"
+        mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
+        sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАГРУЗКА", ready: "ГОТОВО!",
+        buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
+        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyStars: "КУПИТЬ ЗА ⭐️"
     }
 };
 
-// --- СИСТЕМА ЗАДАНИЙ ---
+// --- ИНТЕРФЕЙС ---
+function updateUI() {
+    const L = langMap[currentLang];
+    const nameBox = document.getElementById('user-name');
+    if (nameBox && user) nameBox.innerText = `NEX | ${user.first_name.toUpperCase()}`;
+
+    document.getElementById('balance-value').innerText = Math.floor(balance).toLocaleString();
+    document.getElementById('energy-fill').style.width = (energy / 10) + "%";
+    document.getElementById('boost-fill').style.width = odCharge + "%";
+
+    const btn = document.getElementById('od-btn');
+    if (btn) {
+        if (isOverdrive) btn.innerText = "OVERDRIVE!!";
+        else if (odCharge >= 100) btn.innerText = L.ready;
+        else btn.innerText = `${L.loading} ${Math.floor(odCharge)}%`;
+    }
+
+    renderMarket();
+    renderTasks();
+}
+
+// --- МАГАЗИН ---
+function renderMarket() {
+    const L = langMap[currentLang];
+    const grid = document.getElementById('market-grid');
+    if (!grid) return;
+
+    grid.innerHTML = `
+        <div class="card-nexus">
+            <div class="card-info">
+                <span class="card-title">NODE v.${upgrades.node.lvl}</span>
+                <span class="card-sub">${L.power}: +${upgrades.node.lvl}</span>
+                <span class="card-price">${L.cost}: ${upgrades.node.cost.toLocaleString()} N</span>
+            </div>
+            <button class="nexus-btn-buy" onclick="buyItem('node')">${L.buy}</button>
+        </div>
+        <div class="card-nexus">
+            <div class="card-info">
+                <span class="card-title">VPN v.${upgrades.vpn.lvl}</span>
+                <span class="card-sub">${L.inc}: +${upgrades.vpn.lvl}/SEC</span>
+                <span class="card-price">${L.cost}: ${upgrades.vpn.cost.toLocaleString()} N</span>
+            </div>
+            <button class="nexus-btn-buy" onclick="buyItem('vpn')">${L.buy}</button>
+        </div>
+    `;
+}
+
+// --- ЗАДАНИЯ ---
 function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
@@ -72,28 +116,17 @@ function renderTasks() {
 function completeTask(id, reward) {
     if (tasksDone.includes(id)) return;
 
-    // ЛОГИКА ДЕЙСТВИЙ (ССЫЛКИ)
     if (id === 'sub1') {
-        tg.openTelegramLink('https://t.me/твой_канал'); // ЗАМЕНИ НА СВОЙ КАНАЛ!
+        tg.openTelegramLink('https://t.me/твой_канал'); // ЗАМЕНИТЬ
     }
 
-    // НАЧИСЛЕНИЕ
     balance += reward;
     tasksDone.push(id);
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
     
     updateUI();
-    renderTasks();
     tg.HapticFeedback.notificationOccurred('success');
-}
-
-// --- ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ---
-function updateUI() {
-    if (document.getElementById('balance-value')) {
-        document.getElementById('balance-value').innerText = Math.floor(balance).toLocaleString();
-    }
-    // Здесь можно добавить обновление энергии и других шкал
 }
 
 // --- КЛИКЕР ---
@@ -101,20 +134,37 @@ document.getElementById('touch-zone')?.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (energy < 2) return;
     
-    let pwr = upgrades.node.lvl;
+    let pwr = upgrades.node.lvl * upgrades.node.power;
     balance += pwr;
     energy -= 2;
     
+    if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+    saveData();
     updateUI();
-    localStorage.setItem('nexus_bal', balance);
-    tg.HapticFeedback.impactOccurred('medium');
 });
 
-// Запуск при загрузке
-updateUI();
-renderTasks();
+function buyItem(type) {
+    let u = upgrades[type];
+    if (balance >= u.cost) {
+        balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
+        saveData(); updateUI(); tg.HapticFeedback.notificationOccurred('success');
+    }
+}
+
+function saveData() {
+    localStorage.setItem('nexus_bal', balance);
+    localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
+}
+
+setInterval(() => {
+    if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
+    if (energy < 1000) energy += 2.5;
+    updateUI();
+}, 100);
 
 function toggleModal(id) {
     const m = document.getElementById(id);
     if (m) m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
 }
+
+updateUI();
