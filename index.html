@@ -2,11 +2,31 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexus Mining Engine</title>
+    
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com" rel="preconnect">
     <link rel="stylesheet" href="style.css">
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyBXwMF9uRZWzXh3_1fPxY2SNsJCMmLhMFw",
+        authDomain: "nexus-app-6769e.firebaseapp.com",
+        databaseURL: "https://nexus-app-6769e-default-rtdb.europe-west1.firebasedatabase.app/",
+        projectId: "nexus-app-6769e",
+        storageBucket: "nexus-app-6769e.firebasestorage.app",
+        messagingSenderId: "104884767189",
+        appId: "1:104884767189:web:5f171f7db3ff5a6751d55c",
+        measurementId: "G-6CZV18W7KJ"
+      };
+      
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+    </script>
 </head>
 <body>
     <div id="vignette" class="vignette-effect"></div>
