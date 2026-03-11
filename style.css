@@ -10,8 +10,18 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 .metal-background { width: 100%; height: 100vh; background: radial-gradient(circle at center, #0a162f 0%, #000 100%); display: flex; flex-direction: column; align-items: center; }
 
 /* Кнопки управления */
-.top-controls { position: absolute; top: 60px; right: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 100; }
-.control-btn { background: rgba(0, 212, 255, 0.05); border: 1px solid var(--cyan); border-radius: 12px; padding: 12px; color: var(--cyan); box-shadow: 0 0 15px rgba(0, 212, 255, 0.1); }
+.top-controls { 
+    position: absolute; 
+    top: 20px; /* Было 60px, подняли выше к самому краю */
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 100;
+}
 .control-btn:active { transform: scale(0.9); background: var(--cyan); color: #000; }
 
 /* Верхняя инфо-панель */
