@@ -166,24 +166,32 @@ function renderTasks() {
 
 function openRanks() {
     const c = document.getElementById('rank-list-container');
-    
-    // В списке только ты. Когда будет база данных, сюда будут прилетать другие игроки.
-    let players = [
-        { name: user?.first_name?.toUpperCase() || "YOU", balance: balance, me: true }
-    ];
-    
-    // Сортировка по балансу (будет работать, когда игроков станет много)
-    players.sort((a, b) => b.balance - a.balance);
-    
-    c.innerHTML = "";
-    players.forEach((p, i) => {
-        c.innerHTML += `<div class="rank-item ${p.me ? 'active-rank' : ''}">
-            <span>${i + 1}</span>
-            <b>${p.name}</b>
-            <span>${Math.floor(p.balance).toLocaleString()} N</span>
-        </div>`;
+    c.innerHTML = "<div style='text-align:center; padding:20px; color: #aaa;'>ЗАГРУЗКА ЛИДЕРОВ...</div>";
+
+    // Тянем из базы 10 лучших по балансу
+    db.ref('users').orderByChild('balance').limitToLast(10).once('value', (snapshot) => {
+        let players = [];
+        snapshot.forEach((child) => {
+            const data = child.val();
+            players.push({
+                name: (data.name || "PLAYER").toUpperCase(),
+                balance: data.balance || 0,
+                me: child.key == user?.id // Подсветим тебя в списке
+            });
+        });
+
+        // Сортируем (база выдает от меньшего к большему, нам надо наоборот)
+        players.sort((a, b) => b.balance - a.balance);
+        
+        c.innerHTML = "";
+        players.forEach((p, i) => {
+            c.innerHTML += `<div class="rank-item ${p.me ? 'active-rank' : ''}">
+                <span>${i + 1}</span>
+                <b>${p.name}</b>
+                <span>${Math.floor(p.balance).toLocaleString()} N</span>
+            </div>`;
+        });
     });
-    
     toggleModal('rank-modal');
 }
 
@@ -281,6 +289,20 @@ function toggleModal(id) {
 
 function changeLanguage() { currentLang = currentLang === 'EN' ? 'RU' : 'EN'; localStorage.setItem('nx_lang', currentLang); updateUI(); }
 function toggleHaptic() { hapticEnabled = !hapticEnabled; localStorage.setItem('nx_haptic', hapticEnabled?'off':'on'); updateUI(); }
-function saveData() { localStorage.setItem('nexus_bal', balance); localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades)); }
+function saveData() {
+    // Сохраняем локально в телефон
+    const data = { balance, energy, upgrades, tasksDone };
+    localStorage.setItem('nexus_data', JSON.stringify(data));
+
+    // ОТПРАВЛЯЕМ В ОБЛАКО (Firebase)
+    // Проверяем, что db инициализирован и есть данные пользователя
+    if (typeof db !== 'undefined' && user && user.id) {
+        db.ref('users/' + user.id).set({
+            name: user.first_name || "Unknown",
+            balance: balance,
+            lastSeen: Date.now()
+        });
+    }
+}
 
 updateUI();
