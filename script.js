@@ -1,7 +1,7 @@
 const tg = window.Telegram.WebApp;
-const user = tg.initDataUnsafe?.user;
 tg.expand();
 
+const user = tg.initDataUnsafe?.user;
 // --- ДАННЫЕ (СОСТОЯНИЕ) ---
 let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
 let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
