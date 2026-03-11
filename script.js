@@ -1,4 +1,5 @@
 const tg = window.Telegram.WebApp;
+localStorage.clear()
 tg.expand();
 
 const user = tg.initDataUnsafe?.user;
