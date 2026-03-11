@@ -23,7 +23,6 @@ let odCharge = 0;
 let isOverdrive = false;
 let currentLang = localStorage.getItem('nx_lang') || 'EN';
 let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
-localStorage.removeItem('nexus_tasks'); // Эта строка сбросит выполненные задания
 
 // --- ЛОКАЛИЗАЦИЯ (ПОЛНАЯ) ---
 const langMap = {
@@ -154,7 +153,7 @@ function renderTasks() {
         grid.innerHTML += `
             <div class="card-nexus">
                 <div class="card-info"><span class="card-title">${task.title}</span><span class="card-sub">+${task.reward.toLocaleString()} N</span></div>
-                <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} onclick="completeTask('${task.id}', ${task.reward})">${isDone ? L.claimed : L.claim}</button>
+                <button class="nexus-btn-buy" onclick="completeTask('${task.id}', ${task.reward})">${isDone ? 'ГОТОВО' : 'ВЫПОЛНИТЬ'}</button>
             </div>
         `;
     });
