@@ -34,6 +34,12 @@ const langMap = {
 // --- ОСНОВНОЙ ИНТЕРФЕЙС ---
 function updateUI() {
     const L = langMap[currentLang];
+
+    // Добавь эти 4 строки прямо сюда:
+    const nameBox = document.getElementById('user-name');
+    if (nameBox && user) {
+        nameBox.innerText = `NEX | ${user.first_name.toUpperCase()}`;
+    }
     
     document.getElementById('nav-mining').querySelector('span').innerText = L.mining;
     document.getElementById('nav-market').querySelector('span').innerText = L.market;
