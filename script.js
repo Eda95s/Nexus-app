@@ -238,11 +238,30 @@ function buyItem(type) {
 }
 
 function completeTask(id, reward) {
-    if (!tasksDone.includes(id)) {
-        balance += reward; tasksDone.push(id);
-        localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-        tg.HapticFeedback.notificationOccurred('success'); updateUI();
+    // 1. Проверяем, не выполнено ли задание уже
+    if (tasksDone.includes(id)) {
+        tg.HapticFeedback.notificationOccurred('warning');
+        return; 
     }
+
+    // 2. Логика переходов по ссылкам
+    if (id === 'sub1') {
+        tg.openTelegramLink('https://t.me/твой_канал'); // ЗАМЕНИ НА СВОЮ ССЫЛКУ
+    } else if (id === 'invite') {
+        const inviteLink = `https://t.me/твой_бот?start=${user?.id || '123'}`;
+        tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
+    }
+
+    // 3. Начисляем награду
+    balance += reward;
+    tasksDone.push(id);
+    
+    // 4. Сохраняем и обновляем экран
+    localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+    updateUI();
+    
+    // Вибрация при успехе
+    tg.HapticFeedback.notificationOccurred('success');
 }
 
 setInterval(() => {
