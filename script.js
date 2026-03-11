@@ -1,4 +1,5 @@
 const tg = window.Telegram.WebApp;
+const user = tg.initDataUnsafe?.user;
 tg.expand();
 
 // --- ДАННЫЕ (СОСТОЯНИЕ) ---
@@ -229,9 +230,20 @@ function buyItem(type) {
 
 function completeTask(id, reward) {
     if (!tasksDone.includes(id)) {
-        balance += reward; tasksDone.push(id);
+        // --- РЕАЛЬНЫЕ ПЕРЕХОДЫ ---
+        if (id === 'sub1') {
+            tg.openTelegramLink('https://t.me/nexus_protocol'); // Вставь свою ссылку
+        } else if (id === 'invite') {
+            const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
+            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
+        }
+
+        // Твоя родная логика
+        balance += reward;
+        tasksDone.push(id);
         localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-        tg.HapticFeedback.notificationOccurred('success'); updateUI();
+        tg.HapticFeedback.notificationOccurred('success');
+        updateUI();
     }
 }
 
