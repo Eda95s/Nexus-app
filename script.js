@@ -1,5 +1,9 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
+// ВРЕМЕННО: Очистка памяти для теста в Telegram
+localStorage.removeItem('nexus_tasks');
+tasksDone = []; 
+
 // Получаем данные пользователя
 const user = tg.initDataUnsafe?.user;
 
