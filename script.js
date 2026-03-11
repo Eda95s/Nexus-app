@@ -23,6 +23,7 @@ let odCharge = 0;
 let isOverdrive = false;
 let currentLang = localStorage.getItem('nx_lang') || 'EN';
 let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
+localStorage.removeItem('nexus_tasks'); // Эта строка сбросит выполненные задания
 
 // --- ЛОКАЛИЗАЦИЯ (ПОЛНАЯ) ---
 const langMap = {
