@@ -306,3 +306,33 @@ function saveData() {
 }
 
 updateUI();
+// Функция копирования адреса
+function copyWallet() {
+    const wallet = "0x77e596231a14dee635e42c62ce215a2a47ec2c74";
+    navigator.clipboard.writeText(wallet).then(() => {
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            window.Telegram.WebApp.showAlert("✅ Адрес скопирован!");
+        }
+    });
+}
+
+// Функция переключателя (Показать/Скрыть)
+function toggleDonate() {
+    const section = document.getElementById('donate-section');
+    const btn = document.getElementById('toggleBtn');
+    
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        btn.innerText = '✕ ЗАКРЫТЬ';
+        btn.style.color = '#ff4b4b'; // Меняем цвет на красный при открытии
+        btn.style.borderColor = '#ff4b4b';
+        // Прокручиваем страницу вниз к блоку доната
+        section.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        section.style.display = 'none';
+        btn.innerText = '❤ ПОДДЕРЖАТЬ ПРОЕКТ';
+        btn.style.color = '#00d2ff';
+        btn.style.borderColor = '#00d2ff';
+    }
+}
