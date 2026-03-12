@@ -90,24 +90,35 @@
             </div>
         </div>
         
-    <div style="background: #1a1a1a; padding: 20px; border-radius: 15px; margin: 15px; border: 1px solid #00d2ff; text-align: center; color: #fff; font-family: sans-serif;">
-    <h3 style="color: #00d2ff; margin-top: 0;">ПОДДЕРЖАТЬ ПРОЕКТ</h3>
-    <p style="font-size: 14px; color: #ccc; margin-bottom: 10px;">Валюта: <b>USDT</b> | Сеть: <b>BSC (BEP20)</b></p>
+    <div id="donate-section" style="background: #1a1a1a; padding: 25px; border-radius: 20px; margin: 20px 15px; border: 1px solid #00d2ff; text-align: center; color: #fff; font-family: 'Segoe UI', sans-serif;">
+    <h3 style="color: #00d2ff; margin-top: 0; font-size: 22px; letter-spacing: 1px;">ПОДДЕРЖКА NEXUS</h3>
     
-    <div style="background: #fff; display: inline-block; padding: 10px; border-radius: 10px; margin-bottom: 15px;">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=0x77e596231a14dee635e42c62ce215a2a47ec2c74" 
-             alt="QR Code" style="width: 150px; height: 150px; display: block;">
-    </div>
-    
-    <div style="background: #000; padding: 12px; border-radius: 8px; word-break: break-all; font-family: monospace; font-size: 11px; border: 1px solid #333; color: #00d2ff;">
-        0x77e596231a14dee635e42c62ce215a2a47ec2c74
-    </div>
-    
-    <button onclick="copyWallet()" style="width: 100%; padding: 12px; margin-top: 15px; background: linear-gradient(45deg, #00d2ff, #3a7bd5); color: #fff; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">
-        КОПИРОВАТЬ АДРЕС
-    </button>
-</div>
+    <p style="font-size: 14px; color: #aaa; line-height: 1.5; margin-bottom: 20px;">
+        Ваши донаты помогают нам развивать экосистему, улучшать серверы и быстрее запускать новые функции майнинга. Стань частью истории проекта!
+    </p>
 
+    <div style="background: #fff; display: inline-block; padding: 12px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=0x77e596231a14dee635e42c62ce215a2a47ec2c74" 
+             alt="QR USDT BSC" style="width: 160px; height: 160px; display: block;">
+    </div>
+
+    <div style="text-align: left; background: #000; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 15px;">
+        <span style="font-size: 11px; color: #777; text-transform: uppercase; display: block; margin-bottom: 5px;">Валюта и сеть:</span>
+        <span style="color: #00d2ff; font-weight: bold; font-size: 14px;">USDT (BEP20 / BSC)</span>
+        <hr style="border: 0; border-top: 1px solid #222; margin: 10px 0;">
+        <span style="font-size: 11px; color: #777; text-transform: uppercase; display: block; margin-bottom: 5px;">Адрес кошелька:</span>
+        <span style="word-break: break-all; font-family: monospace; font-size: 11px; color: #fff;">0x77e596231a14dee635e42c62ce215a2a47ec2c74</span>
+    </div>
+
+    <button onclick="copyWallet()" style="width: 100%; padding: 14px; background: linear-gradient(45deg, #00d2ff, #3a7bd5); color: #fff; border: none; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; transition: transform 0.2s;">
+        СКОПИРОВАТЬ АДРЕС
+    </button>
+    
+    <p style="font-size: 11px; color: #555; margin-top: 15px;">
+        * Убедитесь, что отправляете USDT именно в сети BSC (BEP20). Минимальный депозит 0.1 USDT.
+    </p>
+</div>
+        
         <div id="tasks-modal" class="modal-overlay">
             <div class="modal-content full-modal">
                 <h2 id="m-tasks-title">TASKS</h2>
