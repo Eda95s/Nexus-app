@@ -257,49 +257,50 @@ function buyItem(type) {
     }
 }
 
-function completeTask(id, reward) {
+async function completeTask(id, reward) {
     if (tasksDone.includes(id)) return;
 
-    const L = langMap[currentLang];
-
-    // --- 1. ПРОВЕРКА ДЛЯ 100K (УЖЕ ОБСУДИЛИ) ---
-    if (id === 'reach100k') {
-        if (balance < 100000) {
-            tg.showAlert(L.need || "Нужно 100,000 N!");
-            return;
-        }
+    // 1. Проверка 100k (оставляем как есть, она локальная)
+    if (id === 'reach100k' && balance < 100000) {
+        tg.showAlert(currentLang === 'RU' ? "Нужно накопить 100,000 N!" : "Need 100,000 N!");
+        return;
     }
 
-    // --- 2. ПРОВЕРКА ПОДПИСКИ (JOIN HUB) ---
-    if (id === 'sub1') {
-        // Если юзер нажал первый раз — просто отправляем его в канал
-        if (!window.subClicked) {
-            tg.openTelegramLink('https://t.me/nexus_protocol');
-            window.subClicked = true;
-            tg.showAlert(currentLang === 'RU' ? "Подпишись, вернись и нажми еще раз!" : "Subscribe and click again!");
-            return; // МАНЕТЫ НЕ ДАЕМ
-        }
-        // Если нажал второй раз — тогда считаем выполненным
+    // 2. Для подписки и друзей отправляем запрос боту
+    if (id === 'sub1' || id === 'invite') {
+        tg.showConfirm(currentLang === 'RU' ? "Проверить выполнение задания?" : "Check task completion?", async (confirm) => {
+            if (confirm) {
+                try {
+                    // Отправляем запрос твоему боту (замени URL на свой, когда запустишь бота)
+                    const response = await fetch(`https://твой-бот.com/check_task?user_id=${user.id}&task_id=${id}`);
+                    const result = await response.json();
+
+                    if (result.status === 'success') {
+                        balance += reward;
+                        tasksDone.push(id);
+                        localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+                        tg.showAlert("✅ Success!");
+                        updateUI();
+                        saveData();
+                    } else {
+                        tg.showAlert(currentLang === 'RU' ? "Задание еще не выполнено!" : "Task not completed yet!");
+                        // Если это подписка, открываем канал, чтобы юзер знал куда идти
+                        if (id === 'sub1') tg.openTelegramLink('https://t.me/nexus_protocol');
+                    }
+                } catch (e) {
+                    tg.showAlert("Error checking task. Try again later.");
+                }
+            }
+        });
+        return;
     }
 
-    // --- 3. ПРОВЕРКА ПРИГЛАШЕНИЙ (INVITE) ---
-    if (id === 'invite') {
-        if (!window.inviteClicked) {
-            const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
-            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join NEX!`);
-            window.inviteClicked = true;
-            tg.showAlert(currentLang === 'RU' ? "Разошли приглашения и нажми еще раз!" : "Invite friends and click again!");
-            return; // МАНЕТЫ НЕ ДАЕМ
-        }
-    }
-
-    // --- НАЧИСЛЕНИЕ (ТОЛЬКО ЕСЛИ ПРОШЛИ ВСЕ RETURN ВЫШЕ) ---
+    // Для остальных простых заданий (если будут)
     balance += reward;
     tasksDone.push(id);
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-    tg.HapticFeedback.notificationOccurred('success');
     updateUI();
-    if (typeof saveData === "function") saveData();
+    saveData();
 }
 
 setInterval(() => {
