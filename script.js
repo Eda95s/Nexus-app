@@ -1,6 +1,7 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
+localStorage.removeItem('nexus_tasks');
 const user = tg.initDataUnsafe?.user;
 // --- ДАННЫЕ (СОСТОЯНИЕ) ---
 let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
