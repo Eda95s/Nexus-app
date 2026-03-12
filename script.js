@@ -258,39 +258,49 @@ function buyItem(type) {
 }
 
 function completeTask(id, reward) {
-    if (!tasksDone.includes(id)) {
-        
-        // 1. ПРОВЕРКА ДЛЯ ЗАДАНИЯ "REACH 100K N"
-        if (id === 'reach100k' && balance < 100000) {
-            tg.showAlert(currentLang === 'RU' ? "Нужно накопить 100,000 N!" : "Need 100,000 N!");
-            return; // Останавливаем выполнение, монеты не даем
+    if (tasksDone.includes(id)) return;
+
+    const L = langMap[currentLang];
+
+    // --- 1. ПРОВЕРКА ДЛЯ 100K (УЖЕ ОБСУДИЛИ) ---
+    if (id === 'reach100k') {
+        if (balance < 100000) {
+            tg.showAlert(L.need || "Нужно 100,000 N!");
+            return;
         }
+    }
 
-        // 2. ЛОГИКА ДЛЯ КАНАЛА (JOIN HUB)
-        if (id === 'sub1') {
+    // --- 2. ПРОВЕРКА ПОДПИСКИ (JOIN HUB) ---
+    if (id === 'sub1') {
+        // Если юзер нажал первый раз — просто отправляем его в канал
+        if (!window.subClicked) {
             tg.openTelegramLink('https://t.me/nexus_protocol');
-            // Здесь проверка подписки обычно идет через бота, 
-            // но пока просто открываем ссылку.
-        } 
+            window.subClicked = true;
+            tg.showAlert(currentLang === 'RU' ? "Подпишись, вернись и нажми еще раз!" : "Subscribe and click again!");
+            return; // МАНЕТЫ НЕ ДАЕМ
+        }
+        // Если нажал второй раз — тогда считаем выполненным
+    }
 
-        // 3. ЛОГИКА ДЛЯ ДРУЗЕЙ (INVITE)
-        else if (id === 'invite') {
+    // --- 3. ПРОВЕРКА ПРИГЛАШЕНИЙ (INVITE) ---
+    if (id === 'invite') {
+        if (!window.inviteClicked) {
             const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
             tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join NEX!`);
-            // Можешь добавить проверку: если приглашенных < 5, то return.
+            window.inviteClicked = true;
+            tg.showAlert(currentLang === 'RU' ? "Разошли приглашения и нажми еще раз!" : "Invite friends and click again!");
+            return; // МАНЕТЫ НЕ ДАЕМ
         }
-
-        // ЕСЛИ ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ — НАЧИСЛЯЕМ НАГРАДУ
-        balance += reward;
-        tasksDone.push(id);
-        localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-        tg.HapticFeedback.notificationOccurred('success');
-        
-        updateUI(); // Обновляем экран
-        if (typeof saveData === "function") saveData(); // Сохраняем в Firebase
     }
-}
 
+    // --- НАЧИСЛЕНИЕ (ТОЛЬКО ЕСЛИ ПРОШЛИ ВСЕ RETURN ВЫШЕ) ---
+    balance += reward;
+    tasksDone.push(id);
+    localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+    tg.HapticFeedback.notificationOccurred('success');
+    updateUI();
+    if (typeof saveData === "function") saveData();
+}
 
 setInterval(() => {
     if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
