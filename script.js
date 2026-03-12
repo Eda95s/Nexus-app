@@ -325,6 +325,8 @@ function completeTask(id, reward) {
 setInterval(() => {
     if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
     if (energy < 1000) energy += 2.5; // Чуть быстрее реген
+    localStorage.setItem('nexus_balance', balance);
+
     updateUI();
 }, 100);
 
