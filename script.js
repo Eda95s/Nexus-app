@@ -3,13 +3,17 @@ tg.expand();
 
 const user = tg.initDataUnsafe?.user;
 // --- ДАННЫЕ (СОСТОЯНИЕ) ---
-let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
+// Если в памяти пусто, ставим 0 (используем || 0)
+let balance = parseInt(localStorage.getItem('nexus_balance')) || 0;
+
 let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
     node: { lvl: 1, cost: 1000, power: 1 },
     vpn: { lvl: 0, cost: 3240, income: 1 }
 };
+
 let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
-let energy = 1000;
+let energy = parseInt(localStorage.getItem('nexus_energy')) || 1000;
+
 let odCharge = 0;
 let isOverdrive = false;
 let currentLang = localStorage.getItem('nx_lang') || 'EN';
