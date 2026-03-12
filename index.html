@@ -94,7 +94,16 @@
             <div class="modal-content full-modal">
                 <h2 id="m-tasks-title">TASKS</h2>
                 <div class="item-grid" id="tasks-grid">
-                    </div>
+<div id="tasks-grid" class="item-grid">
+    <div class="task-item">
+        <span>CHANNEL (+5000)</span>
+        <button id="btn-sub1" onclick="completeTask('sub1', 5000)" class="nexus-btn-small">ВЫПОЛНИТЬ</button>
+    </div>
+    <div class="task-item">
+        <span>INVITE FRIENDS (+10000)</span>
+        <button id="btn-invite" onclick="completeTask('invite', 10000)" class="nexus-btn-small">ВЫПОЛНИТЬ</button>
+    </div>
+</div>           
                 <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">CLOSE</button>
             </div>
         </div>
