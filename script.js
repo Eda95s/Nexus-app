@@ -149,6 +149,7 @@ function renderTasks() {
         { id: 'sub1', title: L.task1, reward: 50000 },
         { id: 'invite', title: L.task2, reward: 150000 },
         { id: 'reach100k', title: L.task3, reward: 250000 }
+        { id: 'reach100k', title: L.task3, reward: 250000 }
     ];
     grid.innerHTML = "";
     tasks.forEach(task => {
@@ -197,12 +198,31 @@ function openRanks() {
 
 // --- ЛОГИКА ОПЛАТЫ STARS ---
 function buyWithStars(type, price) {
-    if(confirm(`Confirm purchase for ${price} ⭐️?`)) {
-        if(type === 'mult') { upgrades.node.power *= 2; alert("X2 Activated!"); }
-        if(type === 'speed') { alert("Regen Speed Upgraded!"); }
-        saveData(); updateUI();
-    }
+    // Вместо обычного подтверждения вызываем платеж в Telegram
+    const invoiceData = {
+        title: type === 'mult' ? "X2 MULTIPLIER" : "CYBER SPEED",
+        description: "Premium Upgrade for Nexus Mining",
+        payload: `pay_${type}`,
+        currency: "XTR", // Код для Telegram Stars
+        prices: [{ label: "Price", amount: price }]
+    };
+
+    // Это вызовет реальное окно оплаты в Telegram
+    tg.openInvoice(invoiceData, (status) => {
+        if (status === 'paid') {
+            if (type === 'mult') upgrades.node.power *= 2;
+            if (type === 'speed') { /* здесь будет логика скорости */ }
+            tg.showAlert("Покупка прошла успешно! Мощность увеличена! 🔥");
+            saveData();
+            updateUI();
+        } else if (status === 'cancelled') {
+            tg.showAlert("Оплата отменена.");
+        } else {
+            tg.showAlert("Ошибка при оплате.");
+        }
+    });
 }
+
 
 // --- КЛИКЕР И ЭФФЕКТЫ ---
 document.getElementById('touch-zone').addEventListener('touchstart', (e) => {
