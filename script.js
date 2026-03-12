@@ -279,15 +279,19 @@ function buyItem(type) {
 
 function completeTask(id, reward) {
     if (!tasksDone.includes(id)) {
-        // --- РЕАЛЬНЫЕ ПЕРЕХОДЫ ---
+        // Проверка для задания на 100к
+        if (id === 'reach100k' && balance < 100000) {
+            tg.showAlert("У тебя еще нет 100,000 N! Продолжай майнить! ⛏️");
+            return;
+        }
+
         if (id === 'sub1') {
-            tg.openTelegramLink('https://t.me/nexus_protocol'); // Вставь свою ссылку
+            tg.openTelegramLink('https://t.me/nexus_protocol');
         } else if (id === 'invite') {
             const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
             tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
         }
 
-        // Твоя родная логика
         balance += reward;
         tasksDone.push(id);
         localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
