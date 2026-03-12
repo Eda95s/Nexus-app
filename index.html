@@ -82,47 +82,22 @@
         </div>
 
         <div id="market-modal" class="modal-overlay">
-            <div class="modal-content full-modal">
-                <h2 id="m-market-title">MARKET</h2>
-                <div class="item-grid" id="market-grid">
-                    </div>
-                <button class="close-btn-nexus" onclick="toggleModal('market-modal')">CLOSE</button>
-            </div>
-        </div>
-        <div id="id="tasks-modal" class="modal-overlay">
-    <div id="tasks-modal" class="modal-overlay">
     <div class="modal-content full-modal">
-        <h2 id="m-tasks-title">ЗАДАНИЯ</h2>
-        <div class="item-grid" id="tasks-grid">
-            <div class="task-item">
-                <span id="task1-label">ПОДПИСАТЬСЯ НА КАНАЛ (+5000)</span>
-                <button id="btn-sub1" onclick="completeTask('sub1', 5000)" class="nexus-btn-small">ГО</button>
+        <h2 id="m-market-title">MARKET</h2>
+        <div class="item-grid" id="market-grid">
             </div>
-            <div class="task-item">
-                <span id="task2-label">ПРИГЛАСИТЬ 3 ДРУЗЕЙ (+10000)</span>
-                <button id="btn-invite" onclick="completeTask('invite', 10000)" class="nexus-btn-small">ГО</button>
-            </div>
-        </div>
-        <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">ЗАКРЫТЬ</button>
-    </div>
-</div>
-        <div id="tasks-modal" class="modal-overlay">
-    <div class="modal-content full-modal">
-        <h2 id="m-tasks-title">TASKS</h2>
-        <div class="item-grid" id="tasks-grid">
-            <div class="task-item">
-                <span id="task1-label">JOIN HUB (+5000)</span>
-                <button id="btn-sub1" onclick="completeTask('sub1', 5000)" class="nexus-btn-small">GO</button>
-            </div>
-            <div class="task-item">
-                <span id="task2-label">INVITE FRIENDS (+10000)</span>
-                <button id="btn-invite" onclick="completeTask('invite', 10000)" class="nexus-btn-small">GO</button>
-            </div>
-        </div>
-        <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">CLOSE</button>
+        <button class="close-btn-nexus" onclick="toggleModal('market-modal')">CLOSE</button>
     </div>
 </div>
 
+<div id="tasks-modal" class="modal-overlay">
+    <div class="modal-content full-modal">
+        <h2 id="m-tasks-title">TASKS</h2>
+        <div class="item-grid" id="tasks-grid">
+            </div>
+        <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">CLOSE</button>
+    </div>
+</div>
 
         <nav class="nav-bar">
             <div class="nav-item active" id="nav-mining" onclick="location.reload()">
@@ -138,6 +113,6 @@
                 <span>TASKS</span>
             </div>
         </nav>
-    <script src="script.js?v=101.0"></script>
+    <script src="script.js?v=150.0"></script>
 </body>
 </html>
