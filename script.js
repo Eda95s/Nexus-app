@@ -3,8 +3,11 @@ tg.expand();
 
 const user = tg.initDataUnsafe?.user;
 // --- ДАННЫЕ (СОСТОЯНИЕ) ---
+// Эту строчку мы добавляем везде, где меняется balance
 let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
 let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
+localStorage.setItem('nexus_balance', balance);
+
     node: { lvl: 1, cost: 1000, power: 1 },
     vpn: { lvl: 0, cost: 3240, income: 1 }
 };
