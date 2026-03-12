@@ -306,3 +306,18 @@ function saveData() {
 }
 
 updateUI();
+function copyWallet() {
+    const walletAddress = "0x77e596231a14dee635e42c62ce215a2a47ec2c74";
+    
+    // Копирование в буфер обмена
+    navigator.clipboard.writeText(walletAddress).then(() => {
+        // Уведомление через Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            window.Telegram.WebApp.showAlert("✅ Адрес скопирован! Спасибо за поддержку.");
+        }
+    }).catch(err => {
+        console.error('Ошибка копирования:', err);
+    });
+}
+
