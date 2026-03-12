@@ -259,22 +259,38 @@ function buyItem(type) {
 
 function completeTask(id, reward) {
     if (!tasksDone.includes(id)) {
-        // --- РЕАЛЬНЫЕ ПЕРЕХОДЫ ---
-        if (id === 'sub1') {
-            tg.openTelegramLink('https://t.me/nexus_protocol'); // Вставь свою ссылку
-        } else if (id === 'invite') {
-            const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
-            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
+        
+        // 1. ПРОВЕРКА ДЛЯ ЗАДАНИЯ "REACH 100K N"
+        if (id === 'reach100k' && balance < 100000) {
+            tg.showAlert(currentLang === 'RU' ? "Нужно накопить 100,000 N!" : "Need 100,000 N!");
+            return; // Останавливаем выполнение, монеты не даем
         }
 
-        // Твоя родная логика
+        // 2. ЛОГИКА ДЛЯ КАНАЛА (JOIN HUB)
+        if (id === 'sub1') {
+            tg.openTelegramLink('https://t.me/nexus_protocol');
+            // Здесь проверка подписки обычно идет через бота, 
+            // но пока просто открываем ссылку.
+        } 
+
+        // 3. ЛОГИКА ДЛЯ ДРУЗЕЙ (INVITE)
+        else if (id === 'invite') {
+            const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
+            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join NEX!`);
+            // Можешь добавить проверку: если приглашенных < 5, то return.
+        }
+
+        // ЕСЛИ ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ — НАЧИСЛЯЕМ НАГРАДУ
         balance += reward;
         tasksDone.push(id);
         localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
         tg.HapticFeedback.notificationOccurred('success');
-        updateUI();
+        
+        updateUI(); // Обновляем экран
+        if (typeof saveData === "function") saveData(); // Сохраняем в Firebase
     }
 }
+
 
 setInterval(() => {
     if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
