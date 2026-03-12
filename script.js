@@ -257,50 +257,63 @@ function buyItem(type) {
     }
 }
 
-async function completeTask(id, reward) {
+function completeTask(id, reward) {
     if (tasksDone.includes(id)) return;
 
-    // 1. Проверка 100k (оставляем как есть, она локальная)
+    // 1. ПРОВЕРКА БАЛАНСА (Для задания 100k)
     if (id === 'reach100k' && balance < 100000) {
-        tg.showAlert(currentLang === 'RU' ? "Нужно накопить 100,000 N!" : "Need 100,000 N!");
+        tg.showAlert("Ошибка: У вас недостаточно монет для проверки этого задания! Нужно 100,000 N.");
         return;
     }
 
-    // 2. Для подписки и друзей отправляем запрос боту
+    // 2. ЛОГИКА ТАЙМЕРА ДЛЯ ПОДПИСКИ И ПРИГЛАШЕНИЙ (2 МИНУТЫ)
     if (id === 'sub1' || id === 'invite') {
-        tg.showConfirm(currentLang === 'RU' ? "Проверить выполнение задания?" : "Check task completion?", async (confirm) => {
-            if (confirm) {
-                try {
-                    // Отправляем запрос твоему боту (замени URL на свой, когда запустишь бота)
-                    const response = await fetch(`https://твой-бот.com/check_task?user_id=${user.id}&task_id=${id}`);
-                    const result = await response.json();
+        const now = Date.now();
+        const startTime = localStorage.getItem('task_timer_' + id);
 
-                    if (result.status === 'success') {
-                        balance += reward;
-                        tasksDone.push(id);
-                        localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-                        tg.showAlert("✅ Success!");
-                        updateUI();
-                        saveData();
-                    } else {
-                        tg.showAlert(currentLang === 'RU' ? "Задание еще не выполнено!" : "Task not completed yet!");
-                        // Если это подписка, открываем канал, чтобы юзер знал куда идти
-                        if (id === 'sub1') tg.openTelegramLink('https://t.me/nexus_protocol');
-                    }
-                } catch (e) {
-                    tg.showAlert("Error checking task. Try again later.");
-                }
+        // Если юзер нажимает В ПЕРВЫЙ РАЗ
+        if (!startTime) {
+            localStorage.setItem('task_timer_' + id, now);
+            
+            // Открываем ссылку
+            if (id === 'sub1') {
+                tg.openTelegramLink('https://t.me/nexus_protocol'); // Замени на свою ссылку
+            } else {
+                const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
+                tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join NEX!`);
             }
-        });
-        return;
+
+            tg.showAlert("Задание начато! \n\nВ течение 2 минут идет проверка выполнения. Если всё в порядке, монеты будут начислены. Не закрывайте приложение.");
+            return;
+        }
+
+        // Если нажимает ПОВТОРНО — проверяем время
+        const timePassed = now - parseInt(startTime);
+        const twoMinutes = 2 * 60 * 1000; // 120 000 миллисекунд
+
+        if (timePassed < twoMinutes) {
+            const timeLeft = Math.ceil((twoMinutes - timePassed) / 1000);
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            
+            tg.showAlert(`Идет проверка выполнения... \n\nПожалуйста, подождите еще ${minutes} мин. ${seconds} сек. Монеты будут начислены автоматически после проверки.`);
+            return;
+        }
     }
 
-    // Для остальных простых заданий (если будут)
+    // 3. НАЧИСЛЕНИЕ (Если проверка пройдена или это обычное задание)
     balance += reward;
     tasksDone.push(id);
+    
+    // Сохраняем прогресс
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+    localStorage.removeItem('task_timer_' + id); // Удаляем таймер после успеха
+    
+    tg.HapticFeedback.notificationOccurred('success');
+    tg.showAlert("Задание выполнено! Начислено: " + reward.toLocaleString() + " N");
+
     updateUI();
-    saveData();
+    if (typeof saveData === "function") saveData();
 }
 
 setInterval(() => {
