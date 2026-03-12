@@ -2,6 +2,8 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 
 const user = tg.initDataUnsafe?.user;
+let taskSteps = {}; 
+
 // --- ДАННЫЕ (СОСТОЯНИЕ) ---
 let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
 let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
@@ -258,21 +260,47 @@ function buyItem(type) {
 }
 
 function completeTask(id, reward) {
-    if (!tasksDone.includes(id)) {
-        // --- РЕАЛЬНЫЕ ПЕРЕХОДЫ ---
-        if (id === 'sub1') {
-            tg.openTelegramLink('https://t.me/nexus_protocol'); // Вставь свою ссылку
-        } else if (id === 'invite') {
-            const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
-            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
-        }
+    // 1. Проверяем, не выполнено ли уже
+    if (tasksDone.includes(id)) {
+        return;
+    }
 
-        // Твоя родная логика
+    // 2. Первый клик — переход по ссылке
+    if (!taskSteps[id]) {
+        if (id === 'sub1') {
+            tg.openTelegramLink('https://t.me/nexus_mining'); // Твоя ссылка
+        } else if (id === 'invite') {
+            const inviteLink = `https://t.me/nexus_mining_bot?start=${user.id}`;
+            tg.openLink(`https://t.me/share/url?url=${inviteLink}`);
+        }
+        
+        taskSteps[id] = true; // Запоминаем шаг
+        
+        // Меняем текст кнопки на "ПРОВЕРИТЬ"
+        // Важно: у кнопок в HTML должны быть id типа "btn-sub1"
+        const btn = document.getElementById('btn-' + id);
+        if (btn) {
+            btn.innerText = "ПРОВЕРИТЬ";
+            btn.style.boxShadow = "0 0 15px #00d2ff"; // Подсветим, что надо нажать еще раз
+        }
+    } 
+    // 3. Второй клик — начисление монет
+    else {
         balance += reward;
         tasksDone.push(id);
-        localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+        
+        saveData(); // Сохраняем в Firebase
+        updateUI(); // Обновляем экран
+        
         tg.HapticFeedback.notificationOccurred('success');
-        updateUI();
+
+        const btn = document.getElementById('btn-' + id);
+        if (btn) {
+            btn.innerText = "ГОТОВО";
+            btn.disabled = true;
+            btn.style.opacity = "0.5";
+            btn.style.boxShadow = "none";
+        }
     }
 }
 
