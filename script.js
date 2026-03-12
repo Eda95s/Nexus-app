@@ -312,6 +312,8 @@ function completeTask(id, reward) {
     // Сохраняем прогресс
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
     localStorage.removeItem('task_timer_' + id); // Удаляем таймер после успеха
+    localStorage.setItem('nexus_balance', balance);
+
     
     tg.HapticFeedback.notificationOccurred('success');
     tg.showAlert("Задание выполнено! Начислено: " + reward.toLocaleString() + " N");
