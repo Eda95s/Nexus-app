@@ -296,7 +296,13 @@ function completeTask(id, reward) {
         tasksDone.push(id);
         localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
         tg.HapticFeedback.notificationOccurred('success');
-        updateUI();
+        updateUI();    // Проверяем наличие элементов перед обновлением, чтобы скрипт не ломался
+    const rankTitle = document.getElementById('m-rank-title');
+    if (rankTitle) rankTitle.innerText = L.top;
+
+    const rankBadge = document.getElementById('rank-badge');
+    if (rankBadge) rankBadge.innerText = newRank;
+
     }
 }
 
