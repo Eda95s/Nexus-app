@@ -3,98 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nexus Mining Engine</title>
-    
+    <title>Nexus Mining</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com" rel="preconnect">
     <link rel="stylesheet" href="style.css">
-
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-
-    <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyBXwMF9uRZWzXh3_1fPxY2SNsJCMmLhMFw",
-        authDomain: "nexus-app-6769e.firebaseapp.com",
-        databaseURL: "https://nexus-app-6769e-default-rtdb.europe-west1.firebasedatabase.app/",
-        projectId: "nexus-app-6769e",
-        storageBucket: "nexus-app-6769e.firebasestorage.app",
-        messagingSenderId: "104884767189",
-        appId: "1:104884767189:web:5f171f7db3ff5a"
-      };
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.database();
-    </script>
 </head>
 <body>
     <div class="metal-background">
-        <div class="vignette-effect"></div>
-        
-        <div class="top-controls">
-            <div class="energy-bar-wrap">
-                <div class="label-with-icon">
-                    <span id="lbl-energy">ENERGY</span>
-                </div>
-                <div class="bar-bg"><div id="energy-fill" class="bar-fill cyan"></div></div>
-                <span id="energy-text">1000</span>
-            </div>
-            <button class="settings-btn" onclick="toggleModal('settings-modal')">⚙️</button>
-        </div>
-
         <div class="balance-container">
-            <img src="coin.png" class="mini-coin">
-            <span id="balance">0</span>
+            <span id="balance-value">0</span>
         </div>
 
-        <div class="coin-container" onclick="mine(event)">
-            <img src="logo.png" id="main-coin">
+        <div class="energy-bar-wrap">
+            <div class="bar-bg"><div id="energy-fill" class="bar-fill"></div></div>
+        </div>
+
+        <div class="coin-container" id="touch-zone">
+            <img src="logo.png" id="coin-visual">
         </div>
 
         <div id="market-modal" class="modal-overlay">
             <div class="modal-content full-modal">
-                <h2 id="m-market-title">MARKET</h2>
-                <div class="item-grid" id="market-grid"></div>
-                <div class="card-nexus" onclick="buyWithStars('mult', 50)" style="margin-top: 10px; border-color: #ffcc00;">
-                    <div class="card-info">
-                        <span class="card-title">PREMIUM X2 ⭐️</span>
-                        <span class="card-sub">50 STARS</span>
-                    </div>
-                </div>
+                <h2>MARKET</h2>
+                <div id="market-grid"></div>
                 <button class="close-btn-nexus" onclick="toggleModal('market-modal')">CLOSE</button>
             </div>
         </div>
 
         <div id="tasks-modal" class="modal-overlay">
             <div class="modal-content full-modal">
-                <h2 id="m-tasks-title">TASKS</h2>
-                <div class="item-grid" id="tasks-grid"></div>
+                <h2>TASKS</h2>
+                <div id="tasks-grid"></div>
                 <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">CLOSE</button>
             </div>
         </div>
 
-        <div id="settings-modal" class="modal-overlay">
-            <div class="modal-content">
-                <h2 id="m-sys-title">SYSTEM</h2>
-                <div class="setting-row">
-                    <span id="lbl-lang">LANGUAGE</span>
-                    <button class="nexus-btn-small" onclick="changeLanguage()">EN</button>
-                </div>
-                <button class="close-btn-nexus" onclick="toggleModal('settings-modal')">CLOSE</button>
-            </div>
-        </div>
-
         <nav class="nav-bar">
-            <div class="nav-item active" id="nav-mining" onclick="location.reload()">
-                <span>MINING</span>
-            </div>
-            <div class="nav-item" id="nav-market" onclick="toggleModal('market-modal')">
-                <span>MARKET</span>
-            </div>
-            <div class="nav-item" id="nav-tasks" onclick="toggleModal('tasks-modal')">
-                <span>TASKS</span>
-            </div>
+            <div onclick="location.reload()">MINE</div>
+            <div onclick="toggleModal('market-modal')">MARKET</div>
+            <div onclick="toggleModal('tasks-modal')">TASKS</div>
         </nav>
     </div>
-    <script src="script.js?v=1000.0"></script>
+    <script src="script.js?v=99.9"></script>
 </body>
 </html>
