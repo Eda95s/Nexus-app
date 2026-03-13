@@ -163,26 +163,41 @@ function renderTasks() {
     const grid = document.getElementById('tasks-grid');
     
     // Список твоих заданий (награды уменьшены в 10 раз)
+    function renderTasks() {
+    const L = langMap[currentLang];
+    const grid = document.getElementById('tasks-grid');
+    if (!grid) return;
+
+    // Расширенный список заданий (нули убраны)
     const tasks = [
-        { id: 'sub1', title: L.task1, reward: 5000 },      // Было 50 000
-        { id: 'invite', title: L.task2, reward: 15000 },   // Было 150 000
-        { id: 'reach100k', title: L.task3, reward: 25000 } // Было 250 000
+        // Социальные (просто клик)
+        { id: 'sub1', title: L.task1, reward: 5000, btnType: 'link' },
+        { id: 'invite', title: L.task2, reward: 15000, btnType: 'link' },
+        // Игровые (проверка условий)
+        { id: 'reach10k', title: L.task3, reward: 25000, btnType: 'check' },
+        { id: 'node_lvl5', title: 'NODE LVL 5', reward: 15000, btnType: 'check' },
+        { id: 'vpn_start', title: 'ACTIVATE VPN', reward: 10000, btnType: 'check' }
     ];
 
     grid.innerHTML = "";
     tasks.forEach(task => {
         const isDone = tasksDone.includes(task.id);
+        
+        // Меняем текст кнопки в зависимости от типа задания
+        let btnText = isDone ? L.claimed : (task.btnType === 'check' ? 'CHECK' : L.claim);
+
         grid.innerHTML += `
             <div class="card-nexus">
                 <div class="card-info">
                     <span class="card-title">${task.title}</span>
                     <span class="card-sub">+${task.reward.toLocaleString()} N</span>
                 </div>
-                <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} onclick="completeTask('${task.id}', ${task.reward})">${isDone ? L.claimed : L.claim}</button>
+                <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} onclick="completeTask('${task.id}', ${task.reward})">${btnText}</button>
             </div>
         `;
     });
 }
+
 
 // ==========================================
 // 6. ИГРОВАЯ МЕХАНИКА (Клик, Эффекты, Таймеры)
@@ -302,23 +317,42 @@ function buyItem(type) {
 
 // Выполнение заданий
 function completeTask(id, reward) {
-    if (!tasksDone.includes(id)) {
-        // Переходы по ссылкам заданий
-        if (id === 'sub1') {
-            tg.openTelegramLink('https://t.me/nexus_protocol');
-        } else if (id === 'invite') {
-            const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
-            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
-        }
+    if (tasksDone.includes(id)) return; // Если уже сделано — ничего не делаем
 
-        // Начисление награды
-        balance += reward;
-        tasksDone.push(id);
-        saveData();
-        tg.HapticFeedback.notificationOccurred('success');
-        updateUI();
+    // 1. БЛОК ПРОВЕРОК ДЛЯ ИГРОВЫХ ЗАДАНИЙ
+    if (id === 'reach10k' && balance < 10000) {
+        tg.showAlert(currentLang === 'RU' ? "Нужно накопить 10,000 N!" : "Need 10,000 N!");
+        return; // Останавливаем выполнение
     }
+    if (id === 'node_lvl5' && upgrades.node.lvl < 5) {
+        tg.showAlert(currentLang === 'RU' ? "Прокачай NODE до 5 уровня!" : "Upgrade NODE to lvl 5!");
+        return;
+    }
+    if (id === 'vpn_start' && upgrades.vpn.lvl < 1) {
+        tg.showAlert(currentLang === 'RU' ? "Купи VPN в магазине!" : "Buy VPN in Market!");
+        return;
+    }
+
+    // 2. БЛОК ДЛЯ СОЦИАЛЬНЫХ ССЫЛОК
+    if (id === 'sub1') {
+        tg.openTelegramLink('https://t.me/nexus_protocol');
+    } else if (id === 'invite') {
+        const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
+        tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
+    }
+
+    // 3. УСПЕХ: ВЫДАЧА НАГРАДЫ
+    balance += reward;
+    tasksDone.push(id);
+    
+    // Сохраняем в память (используем твою стандартную логику)
+    localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+    if (typeof saveData === "function") saveData(); // Если у тебя есть общая функция сохранения
+    
+    tg.HapticFeedback.notificationOccurred('success');
+    updateUI();
 }
+
 
 // Покупка за Telegram Stars (Пока заглушка)
 function buyWithStars(type, price) {
