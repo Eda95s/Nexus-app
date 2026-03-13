@@ -1,0 +1,5 @@
+{
+  "url": "https://eda95s.github.io/Nexus-app/",
+  "name": "Nexus App",
+  "iconUrl": "https://eda95s.github.io/Nexus-app/icon.png"
+}
