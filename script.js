@@ -1,3 +1,17 @@
+const NexusShield = {
+    execute: function(moduleName, task) {
+        try {
+            task();
+        } catch (error) {
+            console.error(`🚨 Ошибка в модуле [${moduleName}]:`, error);
+            // Если включена вибрация, даем сигнал об ошибке
+            if (window.Telegram?.WebApp?.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+            }
+        }
+    }
+};
+
 // ==========================================
 // 1. ИНИЦИАЛИЗАЦИЯ (Telegram)
 // ==========================================
