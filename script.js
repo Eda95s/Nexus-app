@@ -1,7 +1,11 @@
+alert("Скрипт загружен!");
+console.log("Script connected");
+
 window.onerror = function(message, source, lineno, colno, error) {
-    alert("ОШИБКА В КОДЕ: \n" + message + "\nСтрока: " + lineno);
+    alert("ОШИБКА: " + message + "\nЛиния: " + lineno);
     return false;
 };
+
 
 // ==========================================
 // 1. ИНИЦИАЛИЗАЦИЯ (Telegram)
