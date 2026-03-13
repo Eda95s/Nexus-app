@@ -58,18 +58,17 @@ function showDonationQR() {
                 {id: 'copy_addr', type: 'default', text: 'Копировать адрес'},
                 {id: 'close', type: 'destructive', text: 'Закрыть'}
             ]
-        }, (buttonId) => {
+                }, (buttonId) => {
             if (buttonId === 'view_qr') {
-                // Открываем картинку, которую ты загрузишь в GitHub
-                tg.showAsset('https://eda95s.github.io/Nexus-app/donation_qr.jpg');
+                const qrUrl = 'https://eda95s.github.io/Nexus-app/donation_qr.jpg';
+                tg.openLink(qrUrl); // Это откроет картинку на весь экран
             } else if (buttonId === 'copy_addr') {
-                // Твой адрес из скриншота
                 const addr = "0x77e596231a14dee635e42c62ce215a2a47ec2c74";
-                // Копируем в буфер обмена (стандартный метод)
                 navigator.clipboard.writeText(addr).then(() => {
-                    tg.showAlert("Адрес скопирован! Спасибо за поддержку!");
+                    tg.showAlert("✅ Адрес скопирован! Спасибо!");
                 });
             }
+
         });
     });
 }
