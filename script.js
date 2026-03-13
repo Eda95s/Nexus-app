@@ -37,13 +37,15 @@ const langMap = {
         sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "LOADING", ready: "READY!",
         buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
         task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 10K N", top: "TOP MINERS", buyStars: "BUY FOR ⭐️"
+        task4: "USE OVERDRIVE 1 TIME", task5: "EXPLORE MARKET", task6: "FOLLOW ON X", task7: "ACTIVATE SECRET NODE",
     },
     RU: {
         mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
         sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАГРУЗКА", ready: "ГОТОВО!",
         buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
-        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 10К N", top: "ЛИДЕРЫ", buyStars: "КУПИТЬ ЗА ⭐️"
-    }
+        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 10К N", top: "ЛИДЕРЫ", buyStars: "КУПИТЬ ЗА ⭐️"   
+        task4: "ИСПОЛЬЗУЙ БУСТ 1 РАЗ", task5: "ПОСЕТИ МАГАЗИН", task6: "ПОДПИШИСЬ В X", task7: "СЕКРЕТНЫЙ УЗЕЛ",
+}
 };
 
 // ==========================================
@@ -163,10 +165,14 @@ function renderTasks() {
     const grid = document.getElementById('tasks-grid');
     
         // Список твоих заданий (награды уменьшены в 10 раз)
-    const tasks = [
-        { id: 'sub1', title: L.task1, reward: 5000 },      // Было 50 000
-        { id: 'invite', title: L.task2, reward: 15000 },   // Было 150 000
-        { id: 'reach100k', title: L.task3, reward: 25000 } // Было 250 000
+        const tasks = [
+        { id: 'sub1', title: L.task1, reward: 5000 },       // Канал
+        { id: 'invite', title: L.task2, reward: 15000 },    // Друзья
+        { id: 'reach10k', title: L.task3, reward: 25000 },  // 10К монет
+        { id: 'boost_act', title: L.task4, reward: 10000 }, // Юзнуть буст
+        { id: 'market_visit', title: L.task5, reward: 2000 },// Посетить рынок
+        { id: 'x_follow', title: L.task6, reward: 8000 },   // Подписка в X
+        { id: 'secret_node', title: L.task7, reward: 50000 } // Секретный майнер
     ];
 
     grid.innerHTML = "";
@@ -303,15 +309,22 @@ function buyItem(type) {
 // Выполнение заданий
 function completeTask(id, reward) {
     if (!tasksDone.includes(id)) {
-        // Переходы по ссылкам заданий
+        // Логика для разных типов заданий
         if (id === 'sub1') {
             tg.openTelegramLink('https://t.me/nexus_protocol');
         } else if (id === 'invite') {
             const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
-            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
+            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Join Nexus!`);
+        } else if (id === 'x_follow') {
+            tg.openLink('https://twitter.com/your_account'); // Замени на свою ссылку
+        } else if (id === 'market_visit') {
+            toggleModal('market-modal'); // Просто открываем магазин
+        } else if (id === 'reach10k' && balance < 10000) {
+            tg.showAlert("Нужно накопить 10,000 N!");
+            return; // Не даем забрать, если баланс мал
         }
 
-        // Начисление награды
+        // Начисление
         balance += reward;
         tasksDone.push(id);
         saveData();
