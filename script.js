@@ -1,3 +1,8 @@
+window.onerror = function(message, source, lineno, colno, error) {
+    alert("ОШИБКА В КОДЕ: \n" + message + "\nСтрока: " + lineno);
+    return false;
+};
+
 // ==========================================
 // 1. ИНИЦИАЛИЗАЦИЯ (Telegram)
 // ==========================================
