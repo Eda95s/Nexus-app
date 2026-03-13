@@ -5,7 +5,7 @@ const user = tg.initDataUnsafe?.user;
 // --- ИНИЦИАЛИЗАЦИЯ КОШЕЛЬКА ---
 const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
     manifestUrl: 'https://eda95s.github.io/Nexus-app/tonconnect-manifest.json',
-    buttonRootId: 'ton-connect-button'
+    buttonRootId: "ton-connect-button"
 });
 
 tonConnectUI.onStatusChange(wallet => {
