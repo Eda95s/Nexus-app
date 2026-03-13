@@ -163,10 +163,20 @@ function renderTasks() {
     const grid = document.getElementById('tasks-grid');
     
     // Список твоих заданий
+function renderTasks() {
+    const L = langMap[currentLang];
+    const grid = document.getElementById('tasks-grid');
+    if(!grid) return;
+
+    // Список заданий с уменьшенными в 10 раз наградами
     const tasks = [
-        { id: 'sub1', title: L.task1, reward: 50000 },
-        { id: 'invite', title: L.task2, reward: 150000 },
-        { id: 'reach100k', title: L.task3, reward: 250000 }
+        { id: 'sub1', title: L.task1, reward: 5000 },
+        { id: 'invite', title: L.task2, reward: 15000 },
+        { id: 'reach100k', title: L.task3, reward: 25000 },
+        { id: 'daily', title: currentLang === 'RU' ? "ЕЖЕДНЕВНЫЙ БОНУС" : "DAILY BONUS", reward: 1500 },
+        { id: 'upgrade_node', title: currentLang === 'RU' ? "NODE УРОВЕНЬ 5" : "NODE LEVEL 5", reward: 10000 },
+        { id: 'upgrade_vpn', title: currentLang === 'RU' ? "VPN УРОВЕНЬ 5" : "VPN LEVEL 5", reward: 20000 },
+        { id: 'reach1m', title: currentLang === 'RU' ? "СТАТЬ МИЛЛИОНЕРОМ" : "BECOME A MILLIONAIRE", reward: 50000 }
     ];
 
     grid.innerHTML = "";
@@ -303,15 +313,32 @@ function buyItem(type) {
 // Выполнение заданий
 function completeTask(id, reward) {
     if (!tasksDone.includes(id)) {
-        // Переходы по ссылкам заданий
+        const isRU = currentLang === 'RU';
+        
         if (id === 'sub1') {
             tg.openTelegramLink('https://t.me/nexus_protocol');
-        } else if (id === 'invite') {
+        } 
+        else if (id === 'invite') {
             const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
             tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
         }
+        else if (id === 'reach100k' && balance < 100000) {
+            tg.showAlert(isRU ? "Нужно накопить 100,000 N!" : "Need 100,000 N!");
+            return;
+        }
+        else if (id === 'reach1m' && balance < 1000000) {
+            tg.showAlert(isRU ? "Нужно накопить 1,000,000 N!" : "Need 1,000,000 N!");
+            return;
+        }
+        else if (id === 'upgrade_node' && upgrades.node.lvl < 5) {
+            tg.showAlert(isRU ? "Прокачай NODE до 5 уровня!" : "Upgrade NODE to lvl 5!");
+            return;
+        }
+        else if (id === 'upgrade_vpn' && upgrades.vpn.lvl < 5) {
+            tg.showAlert(isRU ? "Прокачай VPN до 5 уровня!" : "Upgrade VPN to lvl 5!");
+            return;
+        }
 
-        // Начисление награды
         balance += reward;
         tasksDone.push(id);
         saveData();
