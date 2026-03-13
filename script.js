@@ -1,56 +1,63 @@
+        // ==========================================
+// 1. ИНИЦИАЛИЗАЦИЯ (Связь с Telegram)
+// ==========================================
+const tg = window.Telegram.WebApp;
+tg.expand();
+const user = tg.initDataUnsafe?.user;
+
+// ==========================================
+// 2. NEXUS SHIELD (Защита и ИИ-отладчик)
+// ==========================================
 const NexusShield = {
     execute: function(moduleName, task) {
         try {
             task();
         } catch (error) {
-            console.error(`🚨 Ошибка в модуле [${moduleName}]:`, error);
+            console.error(`🚨 Ошибка в [${moduleName}]:`, error);
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
             
-            // Вибрация телефона при ошибке
-            if (window.Telegram?.WebApp?.HapticFeedback) {
-                window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
-            }
-
-            // ПРЯМАЯ ПОДСКАЗКА:
-            const aiAdvice = this.getAiAdvice(error.message);
-            
+            // Если что-то сломалось - выскочит окно с подсказкой
             tg.showPopup({
                 title: 'AI Debugger 🤖',
-                message: `Замечена ошибка в "${moduleName}"\n\nТехнически: ${error.message}\n\nСОВЕТ ИИ: ${aiAdvice}`,
+                message: `Ошибка в "${moduleName}"\n\n${error.message}\n\nПроверь последние изменения!`,
                 buttons: [{type: 'close'}]
             });
         }
-    },
-
-    // Маленькая база знаний для ИИ-подсказок на лету
-    getAiAdvice: function(msg) {
-        if (msg.includes('is not defined')) return "Ты пытаешься использовать переменную, которую еще не создал. Проверь название!";
-        if (msg.includes('unexpected token')) return "Скорее всего, ты забыл закрыть скобку или поставить запятую.";
-        if (msg.includes('is not a function')) return "Ты вызываешь функцию, которой нет. Проверь правильность Core.modifyBalance!";
-        return "Что-то пошло не так. Проверь последние изменения в коде!";
     }
 };
 
 // ==========================================
-// 1. ИНИЦИАЛИЗАЦИЯ (Telegram)
+// 3. CORE (Ядро - Безопасные функции)
 // ==========================================
-const tg = window.Telegram.WebApp;
-tg.expand(); // Открываем приложение на весь экран
-const user = tg.initDataUnsafe?.user; // Данные пользователя ТГ
-
-// ==========================================
-// 2. ИГРОВЫЕ ДАННЫЕ (Загрузка из памяти телефона)
-// ==========================================
-// Получаем общий файл сохранений из памяти
-let savedData = JSON.parse(localStorage.getItem('nexus_data')) || {};
-
-// Распаковываем данные (если их нет - ставим значения по умолчанию)
-let balance = savedData.balance || 0;
-let energy = savedData.energy !== undefined ? savedData.energy : 1000;
-let tasksDone = savedData.tasksDone || [];
-let upgrades = savedData.upgrades || {
-    node: { lvl: 1, cost: 1000, power: 1 }, // Улучшение клика
-    vpn:  { lvl: 0, cost: 3240, income: 1 } // Пассивный доход
+const Core = {
+    modifyBalance: function(amount) {
+        NexusShield.execute("Core_Balance", () => {
+            balance += amount;
+            updateUI();
+            saveData();
+        });
+    },
+    consumeEnergy: function(amount) {
+        if (energy >= amount) {
+            energy -= amount;
+            updateUI();
+            return true;
+        }
+        return false;
+    }
 };
+
+// ==========================================
+// 4. ТВОИ ДАННЫЕ (Переменные)
+// ==========================================
+let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
+let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
+    node: { lvl: 1, cost: 1000, power: 1 },
+    vpn: { lvl: 0, cost: 3240, income: 1 }
+};
+let energy = 1000;
+let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
+// ... (оставь остальные переменные как были)
 
 // Переменные состояния (не сохраняются при выходе)
 let odCharge = 0;           // Заряд буста (Overdrive)
@@ -249,33 +256,28 @@ function renderTasks() {
 
 // Обработка касания по монете
 // --- КЛИКЕР С ШАНСОМ КРИТА ---
+
 document.getElementById('touch-zone').addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (energy < 2) return; 
+    
+    // Запускаем через наш "Щит"
+    NexusShield.execute("Mining_Click", () => {
+        if (energy < 2) return; 
 
-    for (let i = 0; i < e.changedTouches.length; i++) {
-        let t = e.changedTouches[i];
-        
-        // 1. Базовая сила клика
-        [span_1](start_span)let pwr = upgrades.node.lvl * upgrades.node.power * (isOverdrive ? 5 : 1);[span_1](end_span)
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            let t = e.changedTouches[i];
+            
+            // Расчет силы клика
+            let pwr = upgrades.node.lvl * upgrades.node.power;
 
-        // 2. ПРОВЕРКА УДАЧИ (1% шанс на Крит x10)
-        let isCritical = Math.random() < 0.01; 
-        if (isCritical) {
-            pwr *= 10;
-            if (hapticEnabled) tg.HapticFeedback.notificationOccurred('warning'); // Особая вибрация
+            // Используем Ядро для начисления денег
+            Core.modifyBalance(pwr);
+            Core.consumeEnergy(2);
+
+            createPop(t.clientX, t.clientY, pwr);
+            spawnParticles(t.clientX, t.clientY);
         }
-
-        // 3. ИСПОЛЬЗУЕМ ЗАЩИЩЕННОЕ ЯДРО
-        NexusShield.execute("LuckyDrop_Module", () => {
-            Core.modifyBalance(pwr); 
-            Core.consumeEnergy(2); 
-        });
-
-        // Визуальный эффект (если крит — текст будет золотым)
-        createPop(t.clientX, t.clientY, pwr, isCritical);
-        spawnParticles(t.clientX, t.clientY);
-    }
+    });
 });
 
 // Отпускание монеты
