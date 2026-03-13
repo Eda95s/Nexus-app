@@ -36,13 +36,13 @@ const langMap = {
         mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
         sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "LOADING", ready: "READY!",
         buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
-        task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyStars: "BUY FOR ⭐️"
+        task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 10K N", top: "TOP MINERS", buyStars: "BUY FOR ⭐️"
     },
     RU: {
         mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
         sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАГРУЗКА", ready: "ГОТОВО!",
         buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
-        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyStars: "КУПИТЬ ЗА ⭐️"
+        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 10К N", top: "ЛИДЕРЫ", buyStars: "КУПИТЬ ЗА ⭐️"
     }
 };
 
@@ -162,11 +162,11 @@ function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
     
-    // Список твоих заданий
+        // Список твоих заданий (награды уменьшены в 10 раз)
     const tasks = [
-        { id: 'sub1', title: L.task1, reward: 50000 },
-        { id: 'invite', title: L.task2, reward: 150000 },
-        { id: 'reach100k', title: L.task3, reward: 250000 }
+        { id: 'sub1', title: L.task1, reward: 5000 },      // Было 50 000
+        { id: 'invite', title: L.task2, reward: 15000 },   // Было 150 000
+        { id: 'reach100k', title: L.task3, reward: 25000 } // Было 250 000
     ];
 
     grid.innerHTML = "";
