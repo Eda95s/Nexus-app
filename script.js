@@ -4,11 +4,29 @@ const NexusShield = {
             task();
         } catch (error) {
             console.error(`🚨 Ошибка в модуле [${moduleName}]:`, error);
-            // Если включена вибрация, даем сигнал об ошибке
+            
+            // Вибрация телефона при ошибке
             if (window.Telegram?.WebApp?.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
             }
+
+            // ПРЯМАЯ ПОДСКАЗКА:
+            const aiAdvice = this.getAiAdvice(error.message);
+            
+            tg.showPopup({
+                title: 'AI Debugger 🤖',
+                message: `Замечена ошибка в "${moduleName}"\n\nТехнически: ${error.message}\n\nСОВЕТ ИИ: ${aiAdvice}`,
+                buttons: [{type: 'close'}]
+            });
         }
+    },
+
+    // Маленькая база знаний для ИИ-подсказок на лету
+    getAiAdvice: function(msg) {
+        if (msg.includes('is not defined')) return "Ты пытаешься использовать переменную, которую еще не создал. Проверь название!";
+        if (msg.includes('unexpected token')) return "Скорее всего, ты забыл закрыть скобку или поставить запятую.";
+        if (msg.includes('is not a function')) return "Ты вызываешь функцию, которой нет. Проверь правильность Core.modifyBalance!";
+        return "Что-то пошло не так. Проверь последние изменения в коде!";
     }
 };
 
