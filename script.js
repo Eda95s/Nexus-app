@@ -10,9 +10,15 @@ window.onerror = function(message, source, lineno, colno, error) {
 // ==========================================
 // 1. ИНИЦИАЛИЗАЦИЯ (Telegram)
 // ==========================================
-const tg = window.Telegram.WebApp;
-tg.expand(); // Открываем приложение на весь экран
-const user = tg.initDataUnsafe?.user; // Данные пользователя ТГ
+// 1. ИНИЦИАЛИЗАЦИЯ (Telegram)
+const tg = window.Telegram ? window.Telegram.WebApp : null;
+
+if (tg) {
+    tg.expand();
+    tg.ready();
+}
+
+const user = tg?.initDataUnsafe?.user || { first_name: "Miner", id: 0 };
 
 // ==========================================
 // 2. ИГРОВЫЕ ДАННЫЕ (Загрузка из памяти телефона)
