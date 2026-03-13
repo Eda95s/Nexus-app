@@ -24,16 +24,23 @@ const user = tg?.initDataUnsafe?.user || { first_name: "Miner", id: 0 };
 // 2. ИГРОВЫЕ ДАННЫЕ (Загрузка из памяти телефона)
 // ==========================================
 // Получаем общий файл сохранений из памяти
-let savedData = JSON.parse(localStorage.getItem('nexus_data')) || {};
+    // Получаем данные из памяти (с защитой от ошибок)
+    let savedData = {};
+    try {
+        const raw = localStorage.getItem('nexusData');
+        savedData = raw ? JSON.parse(raw) : {};
+    } catch (e) {
+        savedData = {};
+    }
 
-// Распаковываем данные (если их нет - ставим значения по умолчанию)
-let balance = savedData.balance || 0;
-let energy = savedData.energy !== undefined ? savedData.energy : 1000;
-let tasksDone = savedData.tasksDone || [];
-let upgrades = savedData.upgrades || {
-    node: { lvl: 1, cost: 1000, power: 1 }, // Улучшение клика
-    vpn:  { lvl: 0, cost: 3240, income: 1 } // Пассивный доход
-};
+    // Распаковываем данные
+    let balance = savedData.balance || 0;
+    let energy = savedData.energy !== undefined ? savedData.energy : 1000;
+    let tasksDone = savedData.tasksDone || [];
+    let upgrades = savedData.upgrades || {
+        node: { lvl: 1, cost: 1000, power: 1 },
+        vpn: { lvl: 0, cost: 3240, income: 1 }
+    };
 
 // Переменные состояния (не сохраняются при выходе)
 let odCharge = 0;           // Заряд буста (Overdrive)
