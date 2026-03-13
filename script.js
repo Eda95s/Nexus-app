@@ -45,6 +45,36 @@ const NexusShield = {
     }
 };
 
+function showDonationQR() {
+    NexusShield.execute("Donation_System", () => {
+        // Вибрация при нажатии
+        tg.HapticFeedback.impactOccurred('medium');
+
+        tg.showPopup({
+            title: 'Поддержать Nexus 💎',
+            message: 'Перевод в сети BSC (BEP20). Твоя поддержка помогает нам развивать систему майнинга!',
+            buttons: [
+                {id: 'view_qr', type: 'default', text: 'Открыть QR-код'},
+                {id: 'copy_addr', type: 'default', text: 'Копировать адрес'},
+                {id: 'close', type: 'destructive', text: 'Закрыть'}
+            ]
+        }, (buttonId) => {
+            if (buttonId === 'view_qr') {
+                // Открываем картинку, которую ты загрузишь в GitHub
+                tg.showAsset('https://eda95s.github.io/Nexus-app/donation_qr.jpg');
+            } else if (buttonId === 'copy_addr') {
+                // Твой адрес из скриншота
+                const addr = "0x77e596231a14dee635e42c62ce215a2a47ec2c74";
+                // Копируем в буфер обмена (стандартный метод)
+                navigator.clipboard.writeText(addr).then(() => {
+                    tg.showAlert("Адрес скопирован! Спасибо за поддержку!");
+                });
+            }
+        });
+    });
+}
+
+
 // ==========================================
 // ИГРОВЫЕ ДАННЫЕ
 // ==========================================
