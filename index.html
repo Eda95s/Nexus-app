@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus Mining Engine</title>
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -12,7 +12,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <script>
-      // Настройки твоей базы данных Firebase
       const firebaseConfig = {
         apiKey: "AIzaSyBXwMF9uRZWzXh3_1fPxY2SNsJCMmLhMFw",
         authDomain: "nexus-app-6769e.firebaseapp.com",
@@ -41,7 +40,7 @@
         </div>
 
         <div class="header-section">
-            <div id="user-name" style="color: #00f2ff; font-weight: bold; margin-bottom: 5px;">Загрузка...</div>
+            <div id="user-name" style="color: #00f2ff; font-weight: bold; margin-bottom: 5px;">LOAD...</div>
             <div id="rank-badge" class="rank-label">RANK: ROOKIE</div>
             <div id="balance-value">0</div>
             <div id="protocol-text" class="protocol-status">NEX</div>
@@ -82,14 +81,16 @@
         <div id="market-modal" class="modal-overlay">
             <div class="modal-content full-modal">
                 <h2 id="m-market-title">MARKET</h2>
-                <div class="item-grid" id="market-grid"></div> <button class="close-btn-nexus" onclick="toggleModal('market-modal')">CLOSE</button>
+                <div class="item-grid" id="market-grid"></div>
+                <button class="close-btn-nexus" onclick="toggleModal('market-modal')">CLOSE</button>
             </div>
         </div>
 
         <div id="tasks-modal" class="modal-overlay">
             <div class="modal-content full-modal">
                 <h2 id="m-tasks-title">TASKS</h2>
-                <div class="item-grid" id="tasks-grid"></div> <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">CLOSE</button>
+                <div class="item-grid" id="tasks-grid"></div>
+                <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">CLOSE</button>
             </div>
         </div>
 
@@ -109,7 +110,7 @@
         </div>
 
         <nav class="nav-bar">
-            <div class="nav-item active" id="nav-mining" onclick="location.reload()">
+            <div class="nav-item active" id="nav-mining">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21H23L12 2Z"/></svg>
                 <span>MINING</span>
             </div>
@@ -124,6 +125,6 @@
         </nav>
     </div>
 
-    <script src="script.js?v=2.0"></script>
+    <script src="script.js"></script>
 </body>
 </html>
