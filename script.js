@@ -43,6 +43,33 @@ let currentLang = localStorage.getItem('nx_lang') || 'EN';
 let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
 
 // ==========================================
+// 3. CORE (ЯДРО - ГЛАВНЫЕ ПРАВИЛА ИГРЫ)
+// ==========================================
+const Core = {
+    // Безопасное обновление баланса
+    modifyBalance: function(amount) {
+        NexusShield.execute("Core_Balance", () => {
+            balance += amount;
+            if (balance < 0) balance = 0;
+            updateUI(); // Обновляем экран
+            saveData(); // Сохраняем в память и облако
+        });
+    },
+
+    // Безопасное использование энергии
+    consumeEnergy: function(amount) {
+        return NexusShield.execute("Core_Energy", () => {
+            if (energy >= amount) {
+                energy -= amount;
+                updateUI();
+                return true;
+            }
+            return false;
+        });
+    }
+};
+
+// ==========================================
 // 3. СЛОВАРИ (Тексты для перевода)
 // ==========================================
 const langMap = {
@@ -215,8 +242,8 @@ document.getElementById('touch-zone').addEventListener('touchstart', (e) => {
         // Расчет силы клика (Умножаем на 5, если включен Overdrive)
         let pwr = upgrades.node.lvl * upgrades.node.power * (isOverdrive ? 5 : 1);
         
-        balance += pwr; 
-        energy -= 2; // Трата энергии за клик
+        Core.modifyBalance(pwr); 
+        Core.consumeEnergy(2); // Трата энергии за клик
         
         // Зарядка буста
         if (!isOverdrive && odCharge < 100) odCharge += 0.4;
@@ -227,8 +254,7 @@ document.getElementById('touch-zone').addEventListener('touchstart', (e) => {
     }
 
     if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
-    saveData(); 
-    updateUI();
+    
 });
 
 // Отпускание монеты
