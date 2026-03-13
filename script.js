@@ -248,31 +248,34 @@ function renderTasks() {
 // ==========================================
 
 // Обработка касания по монете
+// --- КЛИКЕР С ШАНСОМ КРИТА ---
 document.getElementById('touch-zone').addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (energy < 2) return; // Если нет энергии - клик не проходит
-
-    document.getElementById('coin-visual').classList.add('pressed');
+    if (energy < 2) return; 
 
     for (let i = 0; i < e.changedTouches.length; i++) {
         let t = e.changedTouches[i];
         
-        // Расчет силы клика (Умножаем на 5, если включен Overdrive)
-        let pwr = upgrades.node.lvl * upgrades.node.power * (isOverdrive ? 5 : 1);
-        
-        Core.modifyBalance(pwr); 
-        Core.consumeEnergy(2); // Трата энергии за клик
-        
-        // Зарядка буста
-        if (!isOverdrive && odCharge < 100) odCharge += 0.4;
-    
-        // Эффекты цифр и частиц
-        createPop(t.clientX, t.clientY, pwr);
+        // 1. Базовая сила клика
+        [span_1](start_span)let pwr = upgrades.node.lvl * upgrades.node.power * (isOverdrive ? 5 : 1);[span_1](end_span)
+
+        // 2. ПРОВЕРКА УДАЧИ (1% шанс на Крит x10)
+        let isCritical = Math.random() < 0.01; 
+        if (isCritical) {
+            pwr *= 10;
+            if (hapticEnabled) tg.HapticFeedback.notificationOccurred('warning'); // Особая вибрация
+        }
+
+        // 3. ИСПОЛЬЗУЕМ ЗАЩИЩЕННОЕ ЯДРО
+        NexusShield.execute("LuckyDrop_Module", () => {
+            Core.modifyBalanceSsss(pwr); 
+            Core.consumeEnergy(2); 
+        });
+
+        // Визуальный эффект (если крит — текст будет золотым)
+        createPop(t.clientX, t.clientY, pwr, isCritical);
         spawnParticles(t.clientX, t.clientY);
     }
-
-    if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
-    
 });
 
 // Отпускание монеты
@@ -281,14 +284,24 @@ document.getElementById('touch-zone').addEventListener('touchend', () => {
 });
 
 // Всплывающие цифры при клике
-function createPop(x, y, v) {
+function createPop(x, y, v, isCritical = false) {
     const p = document.createElement('div'); 
-    p.className = 'floating-text';
+    [span_3](start_span)p.className = 'floating-text';[span_3](end_span)
+    
     p.innerText = '+' + v; 
     p.style.left = x + 'px'; 
     p.style.top = y + 'px';
+
+    // Если это КРИТ — делаем текст золотым и больше
+    if (isCritical) {
+        p.style.color = 'var(--gold)';
+        p.style.fontSize = '3.5rem';
+        p.style.zIndex = '2001';
+        p.innerText = '+' + v + ' 🔥';
+    }
+
     document.body.appendChild(p); 
-    setTimeout(() => p.remove(), 600);
+    [span_4](start_span)setTimeout(() => p.remove(), 600);[span_4](end_span)
 }
 
 // Частицы (Искры) при клике
