@@ -2,6 +2,29 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user;
+// --- ИНИЦИАЛИЗАЦИЯ КОШЕЛЬКА ---
+const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+    manifestUrl: 'https://eda95s.github.io/Nexus-app/tonconnect-manifest.json',
+    buttonRootId: 'ton-connect-button'
+});
+
+// Следим за подключением
+tonConnectUI.onStatusChange(wallet => {
+    if (wallet) {
+        console.log('Кошелек подключен:', wallet.account.address);
+        // Здесь можно добавить бонус за привязку кошелька через NexusShield
+        NexusShield.execute("Wallet_Connect", () => {
+            if (!tasksDone.includes('wallet_linked')) {
+                balance += 50000; // Бонус за подключение
+                tasksDone.push('wallet_linked');
+                saveData();
+                updateUI();
+                tg.showAlert("Кошелек привязан! +50,000 N 💎");
+            }
+        });
+    }
+});
+
 
 // ==========================================
 // NEXUS SHIELD (СИСТЕМА ЗАЩИТЫ И ОТЛАДКИ)
