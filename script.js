@@ -1,24 +1,36 @@
+// ==========================================
+// 1. ИНИЦИАЛИЗАЦИЯ (Telegram)
+// ==========================================
 const tg = window.Telegram.WebApp;
-tg.expand();
+tg.expand(); // Открываем приложение на весь экран
+const user = tg.initDataUnsafe?.user; // Данные пользователя ТГ
 
-const user = tg.initDataUnsafe?.user;
-// --- ДАННЫЕ (СОСТОЯНИЕ) ---
-// Эту строчку мы добавляем везде, где меняется balance
-let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
-let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
-localStorage.setItem('nexus_balance', balance);
+// ==========================================
+// 2. ИГРОВЫЕ ДАННЫЕ (Загрузка из памяти телефона)
+// ==========================================
+// Получаем общий файл сохранений из памяти
+let savedData = JSON.parse(localStorage.getItem('nexus_data')) || {};
 
-    node: { lvl: 1, cost: 1000, power: 1 },
-    vpn: { lvl: 0, cost: 3240, income: 1 }
+// Распаковываем данные (если их нет - ставим значения по умолчанию)
+let balance = savedData.balance || 0;
+let energy = savedData.energy !== undefined ? savedData.energy : 1000;
+let tasksDone = savedData.tasksDone || [];
+let upgrades = savedData.upgrades || {
+    node: { lvl: 1, cost: 1000, power: 1 }, // Улучшение клика
+    vpn:  { lvl: 0, cost: 3240, income: 1 } // Пассивный доход
 };
-let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
-let energy = 1000;
-let odCharge = 0;
-let isOverdrive = false;
+
+// Переменные состояния (не сохраняются при выходе)
+let odCharge = 0;           // Заряд буста (Overdrive)
+let isOverdrive = false;    // Активен ли буст сейчас
+
+// Настройки приложения
 let currentLang = localStorage.getItem('nx_lang') || 'EN';
 let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
 
-// --- ЛОКАЛИЗАЦИЯ (ПОЛНАЯ) ---
+// ==========================================
+// 3. СЛОВАРИ (Тексты для перевода)
+// ==========================================
 const langMap = {
     EN: {
         mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
@@ -34,16 +46,19 @@ const langMap = {
     }
 };
 
-// --- ОСНОВНОЙ ИНТЕРФЕЙС ---
+// ==========================================
+// 4. ИНТЕРФЕЙС (Обновление текста и экрана)
+// ==========================================
 function updateUI() {
-    const L = langMap[currentLang];
+    const L = langMap[currentLang]; // Берем нужный словарь
 
-    // Добавь эти 4 строки прямо сюда:
+    // Обновляем Имя пользователя вверху
     const nameBox = document.getElementById('user-name');
     if (nameBox && user) {
         nameBox.innerText = `NEX | ${user.first_name.toUpperCase()}`;
     }
     
+    // Перевод интерфейса
     document.getElementById('nav-mining').querySelector('span').innerText = L.mining;
     document.getElementById('nav-market').querySelector('span').innerText = L.market;
     document.getElementById('nav-tasks').querySelector('span').innerText = L.tasks;
@@ -55,51 +70,51 @@ function updateUI() {
     document.getElementById('m-market-title').innerText = L.market;
     document.getElementById('m-tasks-title').innerText = L.tasks;
     document.getElementById('m-rank-title').innerText = L.top;
-    
     document.querySelectorAll('.close-btn-nexus').forEach(b => b.innerText = L.close);
+    
+    // Настройки
     document.getElementById('lang-btn').innerText = currentLang;
     document.getElementById('haptic-btn').innerText = hapticEnabled ? "ON" : "OFF";
-
+    
+    // Баланс и шкалы
     document.getElementById('balance-value').innerText = Math.floor(balance).toLocaleString();
     document.getElementById('energy-fill').style.width = (energy / 10) + "%";
     document.getElementById('boost-fill').style.width = odCharge + "%";
 
+    // Состояние кнопки Буста (Overdrive)
     const btn = document.getElementById('od-btn');
     if (isOverdrive) btn.innerText = "OVERDRIVE!!";
     else if (odCharge >= 100) btn.innerText = L.ready;
     else btn.innerText = `${L.loading} ${Math.floor(odCharge)}%`;
     btn.className = `sync-btn ${odCharge >= 100 ? 'ready' : ''} ${isOverdrive ? 'active' : ''}`;
 
-        // СТАЛО (не шевелится):
-        let newRank = "IRON";
+    // Обновление Ранга в зависимости от баланса
+    let newRank = "IRON";
     if (balance > 100000) newRank = "BRONZE 🥉";
     if (balance > 500000) newRank = "SILVER 🥈";
     if (balance > 2000000) newRank = "GOLD 🥇";
     if (balance > 10000000) newRank = "PLATINUM 💎";
 
     const rankBadge = document.getElementById('rank-badge');
-    // Обновляем, ТОЛЬКО если ранг реально изменился
     if (rankBadge && rankBadge.innerText !== newRank) {
         rankBadge.innerText = newRank;
     }
 
+    // Перерисовываем модальные окна
     renderMarket();
     renderTasks();
 }
 
-// --- МАГАЗИН (STARS + NORMAL) ---
+// ==========================================
+// 5. МАГАЗИН И ЗАДАНИЯ (Генерация карточек)
+// ==========================================
 function renderMarket() {
     const L = langMap[currentLang];
     const grid = document.getElementById('market-grid');
     
-    // Определяем тексты для премиум-товаров в зависимости от языка
     const premiumTexts = {
-        mult: currentLang === 'RU' ? 
-            { title: "МНОЖИТЕЛЬ X2 💎", desc: "ПОСТОЯННАЯ ДВОЙНАЯ СИЛА" } : 
-            { title: "X2 MULTIPLIER 💎", desc: "PERMANENT DOUBLE TAP" },
-        speed: currentLang === 'RU' ? 
-            { title: "КИБЕР-СКОРОСТЬ ⚡️", desc: "X2 РЕГЕНЕРАЦИЯ ЭНЕРГИИ" } : 
-            { title: "CYBER SPEED ⚡️", desc: "X2 ENERGY REGEN" }
+        mult: currentLang === 'RU' ? { title: "МНОЖИТЕЛЬ X2 💎", desc: "ПОСТОЯННАЯ ДВОЙНАЯ СИЛА" } : { title: "X2 MULTIPLIER 💎", desc: "PERMANENT DOUBLE TAP" },
+        speed: currentLang === 'RU' ? { title: "КИБЕР-СКОРОСТЬ ⚡️", desc: "X2 РЕГЕНЕРАЦИЯ ЭНЕРГИИ" } : { title: "CYBER SPEED ⚡️", desc: "X2 ENERGY REGEN" }
     };
 
     grid.innerHTML = `
@@ -143,30 +158,188 @@ function renderMarket() {
     `;
 }
 
-
-// --- СИСТЕМА ЗАДАНИЙ ---
 function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
+    
+    // Список твоих заданий
     const tasks = [
         { id: 'sub1', title: L.task1, reward: 50000 },
         { id: 'invite', title: L.task2, reward: 150000 },
         { id: 'reach100k', title: L.task3, reward: 250000 }
     ];
+
     grid.innerHTML = "";
     tasks.forEach(task => {
         const isDone = tasksDone.includes(task.id);
         grid.innerHTML += `
             <div class="card-nexus">
-                <div class="card-info"><span class="card-title">${task.title}</span><span class="card-sub">+${task.reward.toLocaleString()} N</span></div>
+                <div class="card-info">
+                    <span class="card-title">${task.title}</span>
+                    <span class="card-sub">+${task.reward.toLocaleString()} N</span>
+                </div>
                 <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} onclick="completeTask('${task.id}', ${task.reward})">${isDone ? L.claimed : L.claim}</button>
             </div>
         `;
     });
 }
 
-// --- РЕЙТИНГ (ЧЕСТНЫЙ) ---
+// ==========================================
+// 6. ИГРОВАЯ МЕХАНИКА (Клик, Эффекты, Таймеры)
+// ==========================================
 
+// Обработка касания по монете
+document.getElementById('touch-zone').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (energy < 2) return; // Если нет энергии - клик не проходит
+
+    document.getElementById('coin-visual').classList.add('pressed');
+
+    for (let i = 0; i < e.changedTouches.length; i++) {
+        let t = e.changedTouches[i];
+        
+        // Расчет силы клика (Умножаем на 5, если включен Overdrive)
+        let pwr = upgrades.node.lvl * upgrades.node.power * (isOverdrive ? 5 : 1);
+        
+        balance += pwr; 
+        energy -= 2; // Трата энергии за клик
+        
+        // Зарядка буста
+        if (!isOverdrive && odCharge < 100) odCharge += 0.4;
+    
+        // Эффекты цифр и частиц
+        createPop(t.clientX, t.clientY, pwr);
+        spawnParticles(t.clientX, t.clientY);
+    }
+
+    if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+    saveData(); 
+    updateUI();
+});
+
+// Отпускание монеты
+document.getElementById('touch-zone').addEventListener('touchend', () => {
+    document.getElementById('coin-visual').classList.remove('pressed');
+});
+
+// Всплывающие цифры при клике
+function createPop(x, y, v) {
+    const p = document.createElement('div'); 
+    p.className = 'floating-text';
+    p.innerText = '+' + v; 
+    p.style.left = x + 'px'; 
+    p.style.top = y + 'px';
+    document.body.appendChild(p); 
+    setTimeout(() => p.remove(), 600);
+}
+
+// Частицы (Искры) при клике
+function spawnParticles(x, y) {
+    for (let i = 0; i < 6; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = x + 'px'; 
+        p.style.top = y + 'px';
+        const a = Math.random() * Math.PI * 2; 
+        const d = 30 + Math.random() * 40;
+        p.animate([
+            { transform: 'translate(0,0) scale(1)', opacity: 1 }, 
+            { transform: `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity: 0 }
+        ], { duration: 500 });
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 500);
+    }
+}
+
+// Активация Буста (Overdrive)
+function activateOverdrive() {
+    if (odCharge >= 100 && !isOverdrive) {
+        isOverdrive = true;
+        document.body.classList.add('overdrive-active');
+        
+        // Таймер убывания буста
+        let t = setInterval(() => {
+            odCharge -= 1.5; 
+            updateUI();
+            if (odCharge <= 0) { 
+                clearInterval(t); 
+                isOverdrive = false; 
+                document.body.classList.remove('overdrive-active'); 
+                odCharge = 0; 
+                updateUI(); 
+            }
+        }, 100);
+    }
+}
+
+// Глобальный таймер (Регенерация энергии и Пассивный доход)
+setInterval(() => {
+    if (upgrades.vpn.lvl > 0) {
+        balance += (upgrades.vpn.lvl * 2) / 10; // Доход от VPN
+    }
+    if (energy < 1000) {
+        energy += 2.5; // Восстановление энергии
+    }
+    updateUI();
+}, 100);
+
+// ==========================================
+// 7. ЛОГИКА ПОКУПОК И ЗАДАНИЙ
+// ==========================================
+
+// Покупка улучшений за монеты
+function buyItem(type) {
+    let u = upgrades[type];
+    if (balance >= u.cost) {
+        balance -= u.cost; 
+        u.lvl++;
+        u.cost = Math.floor(u.cost * 1.7); // Увеличение цены следующего уровня
+        saveData(); 
+        updateUI(); 
+        tg.HapticFeedback.notificationOccurred('success');
+    }
+}
+
+// Выполнение заданий
+function completeTask(id, reward) {
+    if (!tasksDone.includes(id)) {
+        // Переходы по ссылкам заданий
+        if (id === 'sub1') {
+            tg.openTelegramLink('https://t.me/nexus_protocol');
+        } else if (id === 'invite') {
+            const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
+            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
+        }
+
+        // Начисление награды
+        balance += reward;
+        tasksDone.push(id);
+        saveData();
+        tg.HapticFeedback.notificationOccurred('success');
+        updateUI();
+    }
+}
+
+// Покупка за Telegram Stars (Пока заглушка)
+function buyWithStars(type, price) {
+    if(confirm(`Confirm purchase for ${price} ⭐️?`)) {
+        if(type === 'mult') { 
+            upgrades.node.power *= 2;
+            alert("X2 Activated!"); 
+        }
+        if(type === 'speed') { 
+            alert("Regen Speed Upgraded!");
+        }
+        saveData(); 
+        updateUI();
+    }
+}
+
+// ==========================================
+// 8. РЕЙТИНГ (Работа с Firebase) И СОХРАНЕНИЯ
+// ==========================================
+
+// Открытие ТОП майнеров
 function openRanks() {
     const c = document.getElementById('rank-list-container');
     c.innerHTML = "<div style='text-align:center; padding:20px; color: #aaa;'>ЗАГРУЗКА ЛИДЕРОВ...</div>";
@@ -179,16 +352,17 @@ function openRanks() {
             players.push({
                 name: (data.name || "PLAYER").toUpperCase(),
                 balance: data.balance || 0,
-                me: child.key == user?.id // Подсветим тебя в списке
+                me: child.key == user?.id // Подсветим себя в списке
             });
         });
 
-        // Сортируем (база выдает от меньшего к большему, нам надо наоборот)
+        // Сортируем (от большего к меньшему)
         players.sort((a, b) => b.balance - a.balance);
         
         c.innerHTML = "";
         players.forEach((p, i) => {
-            c.innerHTML += `<div class="rank-item ${p.me ? 'active-rank' : ''}">
+            c.innerHTML += `
+            <div class="rank-item ${p.me ? 'active-rank' : ''}">
                 <span>${i + 1}</span>
                 <b>${p.name}</b>
                 <span>${Math.floor(p.balance).toLocaleString()} N</span>
@@ -198,107 +372,13 @@ function openRanks() {
     toggleModal('rank-modal');
 }
 
-// --- ЛОГИКА ОПЛАТЫ STARS ---
-function buyWithStars(type, price) {
-    if(confirm(`Confirm purchase for ${price} ⭐️?`)) {
-        if(type === 'mult') { upgrades.node.power *= 2; alert("X2 Activated!"); }
-        if(type === 'speed') { alert("Regen Speed Upgraded!"); }
-        saveData(); updateUI();
-    }
-}
-
-// --- КЛИКЕР И ЭФФЕКТЫ ---
-document.getElementById('touch-zone').addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if (energy < 2) return;
-    document.getElementById('coin-visual').classList.add('pressed');
-    for (let i = 0; i < e.changedTouches.length; i++) {
-        let t = e.changedTouches[i];
-        let pwr = upgrades.node.lvl * upgrades.node.power * (isOverdrive ? 5 : 1);
-        balance += pwr; energy -= 2;
-        if (!isOverdrive && odCharge < 100) odCharge += 0.4;
-        createPop(t.clientX, t.clientY, pwr);
-        spawnParticles(t.clientX, t.clientY);
-    }
-    if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
-    saveData(); updateUI();
-});
-
-document.getElementById('touch-zone').addEventListener('touchend', () => document.getElementById('coin-visual').classList.remove('pressed'));
-
-function createPop(x, y, v) {
-    const p = document.createElement('div'); p.className = 'floating-text';
-    p.innerText = '+' + v; p.style.left = x + 'px'; p.style.top = y + 'px';
-    document.body.appendChild(p); setTimeout(() => p.remove(), 600);
-}
-
-function spawnParticles(x, y) {
-    for (let i = 0; i < 6; i++) {
-        const p = document.createElement('div'); p.className = 'particle';
-        p.style.left = x + 'px'; p.style.top = y + 'px';
-        const a = Math.random() * Math.PI * 2; const d = 30 + Math.random() * 40;
-        p.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity: 0 }], { duration: 500 });
-        document.body.appendChild(p); setTimeout(() => p.remove(), 500);
-    }
-}
-
-function activateOverdrive() {
-    if (odCharge >= 100 && !isOverdrive) {
-        isOverdrive = true; document.body.classList.add('overdrive-active');
-        let t = setInterval(() => {
-            odCharge -= 1.5; updateUI();
-            if (odCharge <= 0) { clearInterval(t); isOverdrive = false; document.body.classList.remove('overdrive-active'); odCharge = 0; updateUI(); }
-        }, 100);
-    }
-}
-
-function buyItem(type) {
-    let u = upgrades[type];
-    if (balance >= u.cost) {
-        balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
-        saveData(); updateUI(); tg.HapticFeedback.notificationOccurred('success');
-    }
-}
-
-function completeTask(id, reward) {
-    if (!tasksDone.includes(id)) {
-        // --- РЕАЛЬНЫЕ ПЕРЕХОДЫ ---
-        if (id === 'sub1') {
-            tg.openTelegramLink('https://t.me/nexus_protocol'); // Вставь свою ссылку
-        } else if (id === 'invite') {
-            const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
-            tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
-        }
-
-        // Твоя родная логика
-        balance += reward;
-        tasksDone.push(id);
-        localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-        tg.HapticFeedback.notificationOccurred('success');
-        updateUI();
-    }
-}
-
-setInterval(() => {
-    if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
-    if (energy < 1000) energy += 2.5; // Чуть быстрее реген
-    updateUI();
-}, 100);
-
-function toggleModal(id) {
-    const m = document.getElementById(id);
-    m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-}
-
-function changeLanguage() { currentLang = currentLang === 'EN' ? 'RU' : 'EN'; localStorage.setItem('nx_lang', currentLang); updateUI(); }
-function toggleHaptic() { hapticEnabled = !hapticEnabled; localStorage.setItem('nx_haptic', hapticEnabled?'off':'on'); updateUI(); }
+// ЕДИНИЙ ЦЕНТР СОХРАНЕНИЙ
 function saveData() {
-    // Сохраняем локально в телефон
+    // 1. Сохраняем локально в телефон (в один файл 'nexus_data')
     const data = { balance, energy, upgrades, tasksDone };
     localStorage.setItem('nexus_data', JSON.stringify(data));
 
-    // ОТПРАВЛЯЕМ В ОБЛАКО (Firebase)
-    // Проверяем, что db инициализирован и есть данные пользователя
+    // 2. ОТПРАВЛЯЕМ В ОБЛАКО (Firebase)
     if (typeof db !== 'undefined' && user && user.id) {
         db.ref('users/' + user.id).set({
             name: user.first_name || "Unknown",
@@ -308,34 +388,29 @@ function saveData() {
     }
 }
 
-updateUI();
-// Функция копирования адреса
-function copyWallet() {
-    const wallet = "0x77e596231a14dee635e42c62ce215a2a47ec2c74";
-    navigator.clipboard.writeText(wallet).then(() => {
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-            window.Telegram.WebApp.showAlert("✅ Адрес скопирован!");
-        }
-    });
+// ==========================================
+// 9. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (Окна, Язык)
+// ==========================================
+
+// Открытие/закрытие модальных окон
+function toggleModal(id) {
+    const m = document.getElementById(id);
+    m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
 }
 
-// Функция переключателя (Показать/Скрыть)
-function toggleDonate() {
-    const section = document.getElementById('donate-section');
-    const btn = document.getElementById('toggleBtn');
-    
-    if (section.style.display === 'none') {
-        section.style.display = 'block';
-        btn.innerText = '✕ ЗАКРЫТЬ';
-        btn.style.color = '#ff4b4b'; // Меняем цвет на красный при открытии
-        btn.style.borderColor = '#ff4b4b';
-        // Прокручиваем страницу вниз к блоку доната
-        section.scrollIntoView({ behavior: 'smooth' });
-    } else {
-        section.style.display = 'none';
-        btn.innerText = '❤ ПОДДЕРЖАТЬ ПРОЕКТ';
-        btn.style.color = '#00d2ff';
-        btn.style.borderColor = '#00d2ff';
-    }
+// Смена языка
+function changeLanguage() { 
+    currentLang = currentLang === 'EN' ? 'RU' : 'EN'; 
+    localStorage.setItem('nx_lang', currentLang); 
+    updateUI();
 }
+
+// Смена настройки вибрации
+function toggleHaptic() { 
+    hapticEnabled = !hapticEnabled; 
+    localStorage.setItem('nx_haptic', hapticEnabled ? 'off' : 'on'); 
+    updateUI(); 
+}
+
+// Запуск отрисовки интерфейса при старте
+updateUI();
