@@ -268,7 +268,7 @@ document.getElementById('touch-zone').addEventListener('touchstart', (e) => {
 
         // 3. ИСПОЛЬЗУЕМ ЗАЩИЩЕННОЕ ЯДРО
         NexusShield.execute("LuckyDrop_Module", () => {
-            Core.modifyBalanceSsss(pwr); 
+            Core.modifyBalance(pwr); 
             Core.consumeEnergy(2); 
         });
 
