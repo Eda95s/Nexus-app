@@ -4,7 +4,7 @@ tg.expand();
 const user = tg.initDataUnsafe?.user;
 // --- ИНИЦИАЛИЗАЦИЯ КОШЕЛЬКА ---
 const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-    manifestUrl: 'https://eda95s.github.io/Nexus-app/tonconnect-manifest.json'
+    manifestUrl: 'https://eda95s.github.io/Nexus-app/tonconnect-manifest.json',
     buttonRootId: "ton-connect-button"
 });
 
