@@ -1,13 +1,8 @@
-        // ==========================================
-// 1. ИНИЦИАЛИЗАЦИЯ (Связь с Telegram)
-// ==========================================
 const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user;
 
-// ==========================================
-// 2. NEXUS SHIELD (Защита и ИИ-отладчик)
-// ==========================================
+// --- ЗАЩИТНЫЙ МОДУЛЬ (NEXUS SHIELD) ---
 const NexusShield = {
     execute: function(moduleName, task) {
         try {
@@ -16,19 +11,17 @@ const NexusShield = {
             console.error(`🚨 Ошибка в [${moduleName}]:`, error);
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
             
-            // Если что-то сломалось - выскочит окно с подсказкой
+            // Если в коде косяк — вылетит это окно
             tg.showPopup({
                 title: 'AI Debugger 🤖',
-                message: `Ошибка в "${moduleName}"\n\n${error.message}\n\nПроверь последние изменения!`,
+                message: `Ошибка в "${moduleName}"\n\nТекст ошибки: ${error.message}\n\nНе переживай, я всё заблокировал, чтобы приложение не вылетело!`,
                 buttons: [{type: 'close'}]
             });
         }
     }
 };
 
-// ==========================================
-// 3. CORE (Ядро - Безопасные функции)
-// ==========================================
+// --- ЯДРО БЕЗОПАСНОСТИ (CORE) ---
 const Core = {
     modifyBalance: function(amount) {
         NexusShield.execute("Core_Balance", () => {
@@ -47,7 +40,6 @@ const Core = {
     }
 };
 
-// ==========================================
 // 4. ТВОИ ДАННЫЕ (Переменные)
 // ==========================================
 let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
@@ -384,9 +376,9 @@ function completeTask(id, reward) {
             tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
         }
 
-        // Начисление награды
-        balance += reward;
-        tasksDone.push(id);
+        // Внутри цикла клика вместо длинных строк:
+Core.modifyBalance(pwr); 
+Core.consumeEnergy(2);
         saveData();
         tg.HapticFeedback.notificationOccurred('success');
         updateUI();
