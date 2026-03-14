@@ -115,7 +115,7 @@
             buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
             task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
             donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
-            daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "COPY LINK", wait: "WAIT",
+            daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "INVITE", wait: "WAIT",
             go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!", lowBal: "NEED 100K ON BALANCE!"
         },
         RU: {
@@ -124,7 +124,7 @@
             buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
             task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
             donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
-            daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "КОПИРОВАТЬ ССЫЛКУ", wait: "ОЖИДАНИЕ",
+            daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "ПРИГЛАСИТЬ", daily: "ЕЖЕДНЕВНЫЙ БОНУС", wait: "ОЖИДАНИЕ",
             go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!", lowBal: "НУЖНО 100К НА БАЛАНСЕ!"
         }
     };
@@ -313,7 +313,7 @@
         `;
 
         const tasks = [
-            { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_mining_hub' },
+            { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_protocol' },
             { id: 'invite', title: L.task2, reward: 15000, url: '' },
             { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
         ];
@@ -378,7 +378,13 @@
 
     window.completeTask = function(id, reward, url) {
         if (!tasksDone.includes(id)) {
-            if (url && url !== '') window.open(url, '_blank');
+            if (url && url !== '') {
+                if (url.includes('t.me')) {
+                    tg.openTelegramLink(url);
+                } else {
+                    window.open(url, '_blank');
+                }
+            }
             taskTimers[id] = Date.now();
             tg.showAlert(currentLang === 'RU' ? "Задание начато! Ожидание 15с." : "Started! Wait 15s.");
         }
@@ -386,9 +392,11 @@
 
     window.copyRefLink = function() {
         const link = `https://t.me/nexus_protocol_bot/app?startapp=${user?.id || '0'}`;
-        navigator.clipboard.writeText(link).then(() => {
-            tg.showPopup({ message: currentLang === 'RU' ? "Ссылка скопирована!" : "Link copied!" });
-        });
+        const text = currentLang === 'RU' 
+            ? "Присоединяйся к Nexus Mining Engine и начни майнить вместе со мной! 🚀" 
+            : "Join Nexus Mining Engine and start mining with me! 🚀";
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+        tg.openTelegramLink(shareUrl);
     };
 
     // ==========================================
