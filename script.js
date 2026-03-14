@@ -3,6 +3,11 @@ tg.expand();
 const user = tg.initDataUnsafe?.user;
 
 // ==========================================
+// КОНФИГУРАЦИЯ (NEW: Для обнуления)
+// ==========================================
+const GAME_VERSION = "1.0.1_WIPE"; 
+
+// ==========================================
 // NEXUS SHIELD (СИСТЕМА ЗАЩИТЫ И ОТЛАДКИ)
 // ==========================================
 const NexusShield = {
@@ -26,15 +31,26 @@ const NexusShield = {
 };
 
 // ==========================================
-// ИГРОВЫЕ ДАННЫЕ
+// ИГРОВЫЕ ДАННЫЕ (С ПРОВЕРКОЙ ВЕРСИИ)
 // ==========================================
+function checkVersionReset() {
+    const savedVersion = localStorage.getItem('nexus_version');
+    if (savedVersion !== GAME_VERSION) {
+        localStorage.clear();
+        localStorage.setItem('nexus_version', GAME_VERSION);
+        return true;
+    }
+    return false;
+}
+
+const isWasReset = checkVersionReset();
+
 let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
 let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
     node: { lvl: 1, cost: 1000, power: 1 },
     vpn: { lvl: 0, cost: 3240, income: 1 }
 };
 
-// НОВОЕ: Временные бусты (время окончания в ms)
 let activeBoosts = JSON.parse(localStorage.getItem('nexus_active_boosts')) || {
     multEnd: 0,
     speedEnd: 0
@@ -142,7 +158,6 @@ function renderMarket() {
     const grid = document.getElementById('market-grid');
     const now = Date.now();
     
-    // Проверка активности буста для отображения в магазине
     const multStatus = activeBoosts.multEnd > now ? " (ACTIVE)" : "";
     const speedStatus = activeBoosts.speedEnd > now ? " (ACTIVE)" : "";
 
@@ -244,10 +259,10 @@ if (touchZone) {
         e.preventDefault();
         NexusShield.execute("Mining_Click", () => {
             if (energy < 2) return;
-            document.getElementById('coin-visual').classList.add('pressed');
+            const coin = document.getElementById('coin-visual');
+            if(coin) coin.classList.add('pressed');
             
             const now = Date.now();
-            // Проверяем, активен ли множитель
             const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
 
             for (let i = 0; i < e.changedTouches.length; i++) {
@@ -273,12 +288,11 @@ if (touchZone) {
 }
 
 // ==========================================
-// СИСТЕМНЫЕ ЦИКЛЫ (С ПРОВЕРКОЙ БУСТА СКОРОСТИ)
+// СИСТЕМНЫЕ ЦИКЛЫ
 // ==========================================
 setInterval(() => {
     if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
     
-    // Регенерация энергии: в 2 раза быстрее если активен буст
     const now = Date.now();
     const regenStep = (activeBoosts.speedEnd > now) ? 5.0 : 2.5;
     
@@ -288,7 +302,6 @@ setInterval(() => {
     updateUI();
 }, 100);
 
-// Остальные функции (renderTasks, openRanks, buyItem, completeTask, saveData и т.д.) без изменений...
 function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
@@ -320,13 +333,24 @@ function buyItem(type) {
     });
 }
 
+// ОБНОВЛЕННАЯ ФУНКЦИЯ СОХРАНЕНИЯ С ЛОГИКОЙ ВЕРСИИ
 function saveData() {
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
     localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
+    localStorage.setItem('nexus_version', GAME_VERSION);
+
     if (typeof db !== 'undefined' && user?.id) {
-        db.ref('users/' + user.id).set({ name: user.first_name || "Unknown", balance: balance, lastSeen: Date.now() });
+        // Теперь в Firebase будет видно версию игрока (поле v)
+        db.ref('users/' + user.id).set({ 
+            name: user.first_name || "Unknown", 
+            balance: balance, 
+            multEnd: activeBoosts.multEnd,
+            speedEnd: activeBoosts.speedEnd,
+            v: GAME_VERSION, // Логика отчистки: записываем версию
+            lastSeen: Date.now() 
+        });
     }
 }
 
@@ -363,5 +387,8 @@ function spawnParticles(x, y) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => { updateUI(); });
+document.addEventListener('DOMContentLoaded', () => { 
+    if(isWasReset) tg.showAlert("NEXUS: Система обновлена для запуска!");
+    updateUI(); 
+});
 updateUI();
