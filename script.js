@@ -1,4 +1,4 @@
-const tg = window.Telegram.WebApp;
+ const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user;
 
@@ -19,13 +19,7 @@ const NexusShield = {
             if (window.Telegram?.WebApp?.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
             }
-            if (typeof tg !== 'undefined' && tg.showPopup) {
-                tg.showPopup({
-                    title: 'AI Debugger 🤖',
-                    message: `Ошибка в "${moduleName}"\n\n${error.message}`,
-                    buttons: [{type: 'close'}]
-                });
-            }
+            return null;
         }
     }
 };
@@ -111,10 +105,20 @@ const langMap = {
     }
 };
 
+const RANKS = [
+    { name: "ROOKIE", limit: 0 },
+    { name: "MINER", limit: 10000 },
+    { name: "PRO MINER", limit: 50000 },
+    { name: "CYBER MINER", limit: 250000 },
+    { name: "NEXUS WHALE", limit: 1000000 },
+    { name: "LEGEND", limit: 5000000 }
+];
+
 // ==========================================
 // ОТРИСОВКА ИНТЕРФЕЙСА (UI)
 // ==========================================
-function updateUI() {
+function updateUI() { 
+    updateRank();
     const L = langMap[currentLang];
     const nameBox = document.getElementById('user-name');
     if (nameBox && user) {
@@ -175,7 +179,7 @@ function renderMarket() {
             <div class="card-info">
                 <span class="card-title">${premiumTexts.mult.title}${multStatus}</span>
                 <span class="card-sub">${premiumTexts.mult.desc}</span>
-                <span class="card-price">1.0 USDT</span>
+                <span class="card-price">1.0 TON</span>
             </div>
             <button class="nexus-btn-buy" onclick="buyWithUSDT('mult', 1)">${L.buyUSDT}</button>
         </div>
@@ -183,7 +187,7 @@ function renderMarket() {
             <div class="card-info">
                 <span class="card-title">${premiumTexts.speed.title}${speedStatus}</span>
                 <span class="card-sub">${premiumTexts.speed.desc}</span>
-                <span class="card-price">2.0 USDT</span>
+                <span class="card-price">2.0 TON</span>
             </div>
             <button class="nexus-btn-buy" onclick="buyWithUSDT('speed', 2)">${L.buyUSDT}</button>
         </div>
@@ -207,9 +211,6 @@ function renderMarket() {
     `;
 }
 
-// ==========================================
-// ЛОГИКА ОПЛАТЫ USDT (WEB3) - ВРЕМЕННЫЕ БУСТЫ
-// ==========================================
 async function buyWithUSDT(type, price) {
     if (typeof tonConnectUI === 'undefined' || !tonConnectUI.account) {
         tg.showPopup({
@@ -223,7 +224,7 @@ async function buyWithUSDT(type, price) {
     const transaction = {
         validUntil: Math.floor(Date.now() / 1000) + 300,
         messages: [{
-            address: "0x77e596231a14dee635e42c62ce215a2a47ec2c74",
+            address: "UQB1fAh0XZ3paTUwJl8poaDG2H0cad4vJfy3bXdnyU5ZVIU3",
             amount: (price * 1000000000).toString(), 
         }]
     };
@@ -231,61 +232,39 @@ async function buyWithUSDT(type, price) {
     try {
         const result = await tonConnectUI.sendTransaction(transaction);
         if (result) {
-            NexusShield.execute("Web3_Purchase", () => {
-                const dayInMs = 24 * 60 * 60 * 1000;
-                const now = Date.now();
-
-                if(type === 'mult') { 
-                    activeBoosts.multEnd = Math.max(activeBoosts.multEnd, now) + dayInMs;
-                    tg.showAlert(currentLang === 'RU' ? "Множитель X2 активирован на 24 часа!" : "X2 Multiplier activated for 24h!"); 
-                }
-                if(type === 'speed') { 
-                    activeBoosts.speedEnd = Math.max(activeBoosts.speedEnd, now) + dayInMs;
-                    tg.showAlert(currentLang === 'RU' ? "Кибер-скорость активирована на 24 часа!" : "Cyber Speed activated for 24h!"); 
-                }
-                
-                localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
-                saveData(); 
-                updateUI();
-            });
+            const dayInMs = 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            if(type === 'mult') activeBoosts.multEnd = Math.max(activeBoosts.multEnd, now) + dayInMs;
+            if(type === 'speed') activeBoosts.speedEnd = Math.max(activeBoosts.speedEnd, now) + dayInMs;
+            localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
+            saveData(); updateUI();
         }
     } catch (e) {
         console.error("Payment error:", e);
     }
 }
 
-// ==========================================
-// ГЛАВНЫЙ КЛИКЕР (С ПРОВЕРКОЙ БУСТА)
-// ==========================================
 const touchZone = document.getElementById('touch-zone');
 if (touchZone) {
     touchZone.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        NexusShield.execute("Mining_Click", () => {
-            if (energy < 2) return;
-            NexusGuard.lastClickTime = Date.now(); // Обновляем время клика для остывания буста
-            
-            const coin = document.getElementById('coin-visual');
-            if(coin) coin.classList.add('pressed');
-            
-            const now = Date.now();
-            const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
-
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                let t = e.changedTouches[i];
-                let pwr = (upgrades.node.lvl * upgrades.node.power * currentMult) * (isOverdrive ? 5 : 1);
-                
-                if (Math.random() < 0.01) { pwr *= 10; tg.HapticFeedback.notificationOccurred('warning'); }
-                
-                Core.modifyBalance(pwr); 
-                Core.consumeEnergy(2);
-                
-                if (!isOverdrive && odCharge < 100) odCharge += 0.4;
-                createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
-                spawnParticles(t.clientX, t.clientY);
-            }
-            if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
-        });
+        if (energy < 2) return;
+        NexusGuard.lastClickTime = Date.now();
+        const coin = document.getElementById('coin-visual');
+        if(coin) coin.classList.add('pressed');
+        const now = Date.now();
+        const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            let t = e.changedTouches[i];
+            let pwr = (upgrades.node.lvl * upgrades.node.power * currentMult) * (isOverdrive ? 5 : 1);
+            if (Math.random() < 0.01) pwr *= 10;
+            Core.modifyBalance(pwr); 
+            Core.consumeEnergy(2);
+            if (!isOverdrive && odCharge < 100) odCharge += 0.4;
+            createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
+            spawnParticles(t.clientX, t.clientY);
+        }
+        if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
     }, {passive: false});
     touchZone.addEventListener('touchend', () => {
         const coin = document.getElementById('coin-visual');
@@ -293,25 +272,14 @@ if (touchZone) {
     });
 }
 
-// ==========================================
-// СИСТЕМНЫЕ ЦИКЛЫ
-// ==========================================
 setInterval(() => {
     if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
-    
     const now = Date.now();
-    
-    // ПРАВКА 1: Медленная регенерация энергии
     const regenStep = (activeBoosts.speedEnd > now) ? 1.5 : 0.5;
     if (energy < 1000) energy = Math.min(1000, energy + regenStep);
-    
-    // ПРАВКА 3: Остывание буста (если не кликали больше 2 секунд)
-    if (!isOverdrive && odCharge > 0) {
-        if (now - NexusGuard.lastClickTime > 2000) {
-            odCharge = Math.max(0, odCharge - 0.3);
-        }
+    if (!isOverdrive && odCharge > 0 && (now - NexusGuard.lastClickTime > 2000)) {
+        odCharge = Math.max(0, odCharge - 0.3);
     }
-    
     localStorage.setItem('nexus_energy', energy);
     updateUI();
 }, 100);
@@ -319,7 +287,7 @@ setInterval(() => {
 function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
-    // ПРАВКА 4: Уменьшены награды на один ноль
+    if (!grid) return;
     const tasks = [
         { id: 'sub1', title: L.task1, reward: 5000 },
         { id: 'invite', title: L.task2, reward: 15000 },
@@ -336,16 +304,14 @@ function renderTasks() {
 }
 
 function buyItem(type) {
-    NexusShield.execute("Market_Purchase", () => {
-        let u = upgrades[type];
-        if (balance >= u.cost) {
-            balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
-            saveData(); updateUI(); 
-            if (hapticEnabled) tg.HapticFeedback.notificationOccurred('success');
-        } else {
-            tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!");
-        }
-    });
+    let u = upgrades[type];
+    if (balance >= u.cost) {
+        balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
+        saveData(); updateUI(); 
+        if (hapticEnabled) tg.HapticFeedback.notificationOccurred('success');
+    } else {
+        tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!");
+    }
 }
 
 function saveData() {
@@ -356,9 +322,17 @@ function saveData() {
     localStorage.setItem('nexus_version', GAME_VERSION);
 
     if (typeof db !== 'undefined' && user?.id) {
+        let currentRank = "ROOKIE";
+        for (let i = RANKS.length - 1; i >= 0; i--) {
+            if (balance >= RANKS[i].limit) {
+                currentRank = RANKS[i].name;
+                break;
+            }
+        }
         db.ref('users/' + user.id).set({ 
             name: user.first_name || "Unknown", 
-            balance: balance, 
+            balance: balance,
+            rank: currentRank,
             multEnd: activeBoosts.multEnd,
             speedEnd: activeBoosts.speedEnd,
             v: GAME_VERSION, 
@@ -369,7 +343,46 @@ function saveData() {
 
 function toggleModal(id) {
     const m = document.getElementById(id);
-    if(m) m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+    if(m) {
+        m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+        if (id === 'rank-modal' && m.style.display === 'flex') loadLeaderboard();
+    }
+}
+
+function loadLeaderboard() {
+    if (typeof db === 'undefined') return;
+    const container = document.getElementById('leaderboard-list');
+    if (!container) return;
+    container.innerHTML = currentLang === 'RU' ? "СИНХРОНИЗАЦИЯ..." : "SYNCING...";
+    db.ref('users').orderByChild('balance').limitToLast(100).once('value', (snap) => {
+        const players = [];
+        snap.forEach((child) => { players.push(child.val()); });
+        players.reverse();
+        renderLeaderboard(players);
+    });
+}
+
+function renderLeaderboard(players) {
+    const container = document.getElementById('leaderboard-list');
+    if (!container) return;
+    container.innerHTML = "";
+    players.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'card-nexus';
+        div.style.marginBottom = "5px";
+        if (p.name === user?.first_name) div.style.borderColor = "#00f2ff";
+        div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                <span style="color:#00f2ff; font-weight:bold; width:30px;">#${i+1}</span>
+                <div style="flex-grow:1; margin-left:10px;">
+                    <div style="font-size:0.8rem; font-weight:bold;">${(p.name || 'ANON').toUpperCase()}</div>
+                    <div style="font-size:0.6rem; color:#888;">${p.rank || 'ROOKIE'}</div>
+                </div>
+                <div style="font-weight:bold;">${Math.floor(p.balance).toLocaleString()} N</div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
 }
 
 function changeLanguage() { 
@@ -379,7 +392,7 @@ function changeLanguage() {
 
 function toggleHaptic() { 
     hapticEnabled = !hapticEnabled; 
-    localStorage.setItem('nx_haptic', hapticEnabled?'off':'on'); updateUI(); 
+    localStorage.setItem('nx_haptic', hapticEnabled?'on':'off'); updateUI(); 
 }
 
 function createPop(x, y, v, isCrit) {
@@ -400,26 +413,33 @@ function spawnParticles(x, y) {
     }
 }
 
-// ДОБАВЛЕНО: Функция для кнопки буста, чтобы она работала и не выдавала ошибку
 function activateOverdrive() {
     if (odCharge >= 100 && !isOverdrive) {
         isOverdrive = true;
         if (hapticEnabled) tg.HapticFeedback.notificationOccurred('success');
-        
         let drain = setInterval(() => {
             odCharge -= 2;
             if (odCharge <= 0) {
-                odCharge = 0;
-                isOverdrive = false;
-                clearInterval(drain);
+                odCharge = 0; isOverdrive = false; clearInterval(drain);
             }
             updateUI();
         }, 100);
     }
 }
 
+function updateRank() {
+    let currentRankName = RANKS[0].name;
+    for (let i = RANKS.length - 1; i >= 0; i--) {
+        if (balance >= RANKS[i].limit) {
+            currentRankName = RANKS[i].name;
+            break;
+        }
+    }
+    const rankBadge = document.getElementById('rank-badge');
+    if (rankBadge) rankBadge.innerText = `RANK: ${currentRankName}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => { 
-    if(isWasReset) tg.showAlert("NEXUS: Система обновлена для запуска!");
+    if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
     updateUI(); 
 });
-updateUI();
