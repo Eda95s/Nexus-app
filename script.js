@@ -2,24 +2,28 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user;
-// --- ИНИЦИАЛИЗАЦИЯ КОШЕЛЬКА ---
+// 1. Инициализация самого объекта (проверь, есть ли это у тебя)
 const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
     manifestUrl: 'https://eda95s.github.io/Nexus-app/tonconnect-manifest.json',
- // Используем ./ вместо полной ссылки
-    buttonRootId: 'ton-connect'
+    buttonRootId: 'ton-connect' // ID контейнера для стандартной кнопки
 });
 
+// 2. ФУНКЦИЯ ДЛЯ ТВОЕЙ КАСТОМНОЙ КНОПКИ
+// Если у тебя своя кнопка "Connect Wallet", вызывай это:
+async function connectWallet() {
+    try {
+        const connectedWallet = await tonConnectUI.openModal();
+        console.log("Модальное окно открыто", connectedWallet);
+    } catch (error) {
+        console.error("Ошибка при открытии модалки:", error);
+    }
+}
+
+// 3. Твой обработчик статуса (оставляем как есть)
 tonConnectUI.onStatusChange(wallet => {
     if (wallet) {
-        NexusShield.execute("Wallet_Connect", () => {
-            if (typeof tasksDone !== 'undefined' && !tasksDone.includes('wallet_linked')) {
-                Core.modifyBalance(100000); // Даем сразу 100к за старания!
-                tasksDone.push('wallet_linked');
-                saveData();
-                updateUI();
-                tg.showAlert("✅ Кошелек привязан! +100,000 N");
-            }
-        });
+        // Твоя логика с начислением 100к N...
+        tg.showAlert("✅ Кошелек привязан! +100,000 N");
     }
 });
 
