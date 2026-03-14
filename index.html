@@ -9,10 +9,11 @@
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link rel="stylesheet" href="style.css">
 
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <script>
-      // Настройки твоей базы данных Firebase
       const firebaseConfig = {
         apiKey: "AIzaSyBXwMF9uRZWzXh3_1fPxY2SNsJCMmLhMFw",
         authDomain: "nexus-app-6769e.firebaseapp.com",
@@ -25,16 +26,54 @@
       };
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
+
+      // Логика кошелька
+      let tonConnectUI;
+      document.addEventListener("DOMContentLoaded", () => {
+          tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+              manifestUrl: 'https://eda95s.github.io/Nexus-app/tonconnect-manifest.json'
+          });
+      });
+
+      async function connectWallet() {
+          try {
+              await tonConnectUI.openModal();
+          } catch (e) {
+              console.error("Wallet error:", e);
+          }
+      }
     </script>
+    <style>
+        /* Плавающая кнопка доната */
+        #floating-donate {
+            position: fixed; bottom: 80px; right: 15px; width: 50px; height: 50px;
+            background: rgba(38, 161, 123, 0.9); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000;
+            border: 2px solid #fff; cursor: pointer; color: white; font-weight: bold;
+            font-size: 10px;
+        }
+    </style>
 </head>
 <body>
     <div id="vignette" class="vignette-effect"></div>
+
+    <div id="floating-donate" onclick="window.Telegram.WebApp.openLink('https://t.me/твой_канал')">USDT</div>
 
     <div class="metal-background">
         <div class="top-controls">
             <div class="control-btn" onclick="openRanks()">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
             </div>
+            
+            <div class="control-btn" onclick="connectWallet()">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
+                    <path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path>
+                    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path>
+                </svg>
+            </div>
+
             <div class="control-btn" onclick="toggleModal('settings-modal')">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </div>
