@@ -1,30 +1,6 @@
-      const tg = window.Telegram.WebApp;
+const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user;
-// 1. Инициализация самого объекта (проверь, есть ли это у тебя)
-const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-    manifestUrl: 'https://eda95s.github.io/Nexus-app/tonconnect-manifest.json',
-    buttonRootId: 'ton-connect' // ID контейнера для стандартной кнопки
-});
-
-// 2. ФУНКЦИЯ ДЛЯ ТВОЕЙ КАСТОМНОЙ КНОПКИ
-// Если у тебя своя кнопка "Connect Wallet", вызывай это:
-async function connectWallet() {
-    try {
-        const connectedWallet = await tonConnectUI.openModal();
-        console.log("Модальное окно открыто", connectedWallet);
-    } catch (error) {
-        console.error("Ошибка при открытии модалки:", error);
-    }
-}
-
-// 3. Твой обработчик статуса (оставляем как есть)
-tonConnectUI.onStatusChange(wallet => {
-    if (wallet) {
-        // Твоя логика с начислением 100к N...
-        tg.showAlert("✅ Кошелек привязан! +100,000 N");
-    }
-});
 
 // ==========================================
 // NEXUS SHIELD (СИСТЕМА ЗАЩИТЫ И ОТЛАДКИ)
@@ -48,35 +24,6 @@ const NexusShield = {
         }
     }
 };
-
-function showDonationQR() {
-    NexusShield.execute("Donation_System", () => {
-        // Вибрация при нажатии
-        tg.HapticFeedback.impactOccurred('medium');
-
-        tg.showPopup({
-            title: 'Поддержать Nexus 💎',
-            message: 'Перевод в сети BSC (BEP20). Твоя поддержка помогает нам развивать систему майнинга!',
-            buttons: [
-                {id: 'view_qr', type: 'default', text: 'Открыть QR-код'},
-                {id: 'copy_addr', type: 'default', text: 'Копировать адрес'},
-                {id: 'close', type: 'destructive', text: 'Закрыть'}
-            ]
-                }, (buttonId) => {
-            if (buttonId === 'view_qr') {
-                const qrUrl = 'https://eda95s.github.io/Nexus-app/donation_qr.jpg';
-                tg.openLink(qrUrl); // Это откроет картинку на весь экран
-            } else if (buttonId === 'copy_addr') {
-                const addr = "0x77e596231a14dee635e42c62ce215a2a47ec2c74";
-                navigator.clipboard.writeText(addr).then(() => {
-                    tg.showAlert("✅ Адрес скопирован! Спасибо!");
-                });
-            }
-
-        });
-    });
-}
-
 
 // ==========================================
 // ИГРОВЫЕ ДАННЫЕ
