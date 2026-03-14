@@ -30,6 +30,10 @@ const NexusShield = {
     }
 };
 
+const NexusGuard = {
+    lastClickTime: 0
+};
+
 // ==========================================
 // ИГРОВЫЕ ДАННЫЕ (С ПРОВЕРКОЙ ВЕРСИИ)
 // ==========================================
@@ -207,7 +211,7 @@ function renderMarket() {
 // ЛОГИКА ОПЛАТЫ USDT (WEB3) - ВРЕМЕННЫЕ БУСТЫ
 // ==========================================
 async function buyWithUSDT(type, price) {
-    if (!tonConnectUI.account) {
+    if (typeof tonConnectUI === 'undefined' || !tonConnectUI.account) {
         tg.showPopup({
             title: 'Nexus Wallet',
             message: currentLang === 'RU' ? 'Сначала подключите кошелек!' : 'Please connect your wallet first!',
@@ -259,6 +263,8 @@ if (touchZone) {
         e.preventDefault();
         NexusShield.execute("Mining_Click", () => {
             if (energy < 2) return;
+            NexusGuard.lastClickTime = Date.now(); // Обновляем время клика для остывания буста
+            
             const coin = document.getElementById('coin-visual');
             if(coin) coin.classList.add('pressed');
             
@@ -294,9 +300,17 @@ setInterval(() => {
     if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
     
     const now = Date.now();
-    const regenStep = (activeBoosts.speedEnd > now) ? 5.0 : 2.5;
     
+    // ПРАВКА 1: Медленная регенерация энергии
+    const regenStep = (activeBoosts.speedEnd > now) ? 1.5 : 0.5;
     if (energy < 1000) energy = Math.min(1000, energy + regenStep);
+    
+    // ПРАВКА 3: Остывание буста (если не кликали больше 2 секунд)
+    if (!isOverdrive && odCharge > 0) {
+        if (now - NexusGuard.lastClickTime > 2000) {
+            odCharge = Math.max(0, odCharge - 0.3);
+        }
+    }
     
     localStorage.setItem('nexus_energy', energy);
     updateUI();
@@ -305,10 +319,11 @@ setInterval(() => {
 function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
+    // ПРАВКА 4: Уменьшены награды на один ноль
     const tasks = [
-        { id: 'sub1', title: L.task1, reward: 50000 },
-        { id: 'invite', title: L.task2, reward: 150000 },
-        { id: 'reach100k', title: L.task3, reward: 250000 }
+        { id: 'sub1', title: L.task1, reward: 5000 },
+        { id: 'invite', title: L.task2, reward: 15000 },
+        { id: 'reach100k', title: L.task3, reward: 25000 }
     ];
     grid.innerHTML = "";
     tasks.forEach(task => {
@@ -333,7 +348,6 @@ function buyItem(type) {
     });
 }
 
-// ОБНОВЛЕННАЯ ФУНКЦИЯ СОХРАНЕНИЯ С ЛОГИКОЙ ВЕРСИИ
 function saveData() {
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
@@ -342,13 +356,12 @@ function saveData() {
     localStorage.setItem('nexus_version', GAME_VERSION);
 
     if (typeof db !== 'undefined' && user?.id) {
-        // Теперь в Firebase будет видно версию игрока (поле v)
         db.ref('users/' + user.id).set({ 
             name: user.first_name || "Unknown", 
             balance: balance, 
             multEnd: activeBoosts.multEnd,
             speedEnd: activeBoosts.speedEnd,
-            v: GAME_VERSION, // Логика отчистки: записываем версию
+            v: GAME_VERSION, 
             lastSeen: Date.now() 
         });
     }
@@ -384,6 +397,24 @@ function spawnParticles(x, y) {
         const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 40;
         p.animate([{ opacity: 1 }, { transform: `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity: 0 }], 500);
         document.body.appendChild(p); setTimeout(() => p.remove(), 500);
+    }
+}
+
+// ДОБАВЛЕНО: Функция для кнопки буста, чтобы она работала и не выдавала ошибку
+function activateOverdrive() {
+    if (odCharge >= 100 && !isOverdrive) {
+        isOverdrive = true;
+        if (hapticEnabled) tg.HapticFeedback.notificationOccurred('success');
+        
+        let drain = setInterval(() => {
+            odCharge -= 2;
+            if (odCharge <= 0) {
+                odCharge = 0;
+                isOverdrive = false;
+                clearInterval(drain);
+            }
+            updateUI();
+        }, 100);
     }
 }
 
