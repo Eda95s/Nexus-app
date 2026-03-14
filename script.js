@@ -1,535 +1,525 @@
-const tg = window.Telegram.WebApp;
-tg.expand();
-const user = tg.initDataUnsafe?.user;
+(function() { // Защитный слой: скрывает переменные от прямого доступа через консоль браузера
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const user = tg.initDataUnsafe?.user;
 
-// ==========================================
-// КОНФИГУРАЦИЯ (НОВАЯ ВЕРСИЯ ДЛЯ ОБНУЛЕНИЯ)
-// ==========================================
-const GAME_VERSION = "2.1.0_S2_FIXED"; 
+    // ==========================================
+    // КОНФИГУРАЦИЯ
+    // ==========================================
+    const GAME_VERSION = "2.1.0_S2_FULL_SECURE"; 
+    const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o";
+    const CHANNEL_ID = "-1002086386401";
 
-// ==========================================
-// NEXUS SHIELD (СИСТЕМА ЗАЩИТЫ И ОТЛАДКИ)
-// ==========================================
-const NexusShield = {
-    execute: function(moduleName, task) {
-        try {
-            return task();
-        } catch (error) {
-            console.error(`🚨 Ошибка в [${moduleName}]:`, error);
-            if (window.Telegram?.WebApp?.HapticFeedback) {
-                window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
-            }
-            return null;
+    // ==========================================
+    // ИГРОВЫЕ ДАННЫЕ
+    // ==========================================
+    function checkVersionReset() {
+        const savedVersion = localStorage.getItem('nexus_version');
+        if (savedVersion !== GAME_VERSION) {
+            localStorage.clear();
+            localStorage.setItem('nexus_version', GAME_VERSION);
+            return true;
         }
+        return false;
     }
-};
 
-const NexusGuard = {
-    lastClickTime: 0
-};
+    const isWasReset = checkVersionReset();
 
-// ==========================================
-// ИГРОВЫЕ ДАННЫЕ (С ПРОВЕРКОЙ ВЕРСИИ)
-// ==========================================
-function checkVersionReset() {
-    const savedVersion = localStorage.getItem('nexus_version');
-    if (savedVersion !== GAME_VERSION) {
-        localStorage.clear();
-        localStorage.setItem('nexus_version', GAME_VERSION);
-        return true;
-    }
-    return false;
-}
+    // Используем parseFloat для корректного учета пассивного дохода
+    let balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
+    let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
+    let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
+        node: { lvl: 1, cost: 1000, power: 1 },
+        vpn: { lvl: 0, cost: 3240, income: 1 }
+    };
 
-const isWasReset = checkVersionReset();
+    let activeBoosts = JSON.parse(localStorage.getItem('nexus_active_boosts')) || {
+        multEnd: 0,
+        speedEnd: 0
+    };
 
-let balance = parseInt(localStorage.getItem('nexus_bal')) || 0;
-let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
-    node: { lvl: 1, cost: 1000, power: 1 },
-    vpn: { lvl: 0, cost: 3240, income: 1 }
-};
+    let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
+    let energy = parseInt(localStorage.getItem('nexus_energy')) || 1000;
+    let odCharge = 0;
+    let isOverdrive = false;
+    let currentLang = localStorage.getItem('nx_lang') || 'EN';
+    let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
 
-let activeBoosts = JSON.parse(localStorage.getItem('nexus_active_boosts')) || {
-    multEnd: 0,
-    speedEnd: 0
-};
+    let lastDailyClaim = parseInt(localStorage.getItem('nexus_daily')) || 0;
+    let dailyStreak = parseInt(localStorage.getItem('nexus_streak')) || 0;
+    let refClaimed = localStorage.getItem('nexus_ref_claimed') === 'true';
 
-let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
-let energy = parseInt(localStorage.getItem('nexus_energy')) || 1000;
-let odCharge = 0;
-let isOverdrive = false;
-let currentLang = localStorage.getItem('nx_lang') || 'EN';
-let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
+    let taskTimers = {};
 
-let lastDailyClaim = parseInt(localStorage.getItem('nexus_daily')) || 0;
-let dailyStreak = parseInt(localStorage.getItem('nexus_streak')) || 0;
-let refClaimed = localStorage.getItem('nexus_ref_claimed') === 'true';
+    // ==========================================
+    // СИСТЕМЫ ЗАЩИТЫ
+    // ==========================================
+    const NexusShield = {
+        execute: function(moduleName, task) {
+            try { return task(); } catch (e) {
+                console.error(`🚨 Error in [${moduleName}]:`, e);
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                return null;
+            }
+        }
+    };
 
-// ==========================================
-// CORE (ЯДРО ИГРОВОЙ ЛОГИКИ)
-// ==========================================
-const Core = {
-    modifyBalance: function(amount) {
-        NexusShield.execute("Core_Balance", () => {
-            balance += amount;
-            if (balance < 0) balance = 0;
-            updateUI();
-            saveData();
-        });
-    },
-    consumeEnergy: function(amount) {
-        return NexusShield.execute("Core_Energy", () => {
-            if (energy >= amount) {
-                energy -= amount;
+    const NexusGuard = { lastClickTime: 0 };
+
+    // ==========================================
+    // CORE (ЛОГИКА)
+    // ==========================================
+    const Core = {
+        modifyBalance: function(amount) {
+            NexusShield.execute("Core_Balance", () => {
+                balance += amount;
+                if (balance < 0) balance = 0;
                 updateUI();
-                return true;
-            }
-            return false;
-        });
-    }
-};
-
-// ==========================================
-// ЯЗЫКОВЫЕ ПАКЕТЫ
-// ==========================================
-const langMap = {
-    EN: {
-        mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
-        sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "CHARGE", ready: "READY!",
-        buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
-        task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
-        donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
-        daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "COPY LINK", wait: "WAIT",
-        go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!", lowBal: "NEED 100K ON BALANCE!"
-    },
-    RU: {
-        mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
-        sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАРЯД", ready: "ГОТОВО!",
-        buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
-        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
-        donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
-        daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "КОПИРОВАТЬ ССЫЛКУ", wait: "ОЖИДАНИЕ",
-        go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!", lowBal: "НУЖНО 100К НА БАЛАНСЕ!"
-    }
-};
-
-const RANKS = [
-    { name: "ROOKIE", limit: 0 },
-    { name: "MINER", limit: 10000 },
-    { name: "PRO MINER", limit: 50000 },
-    { name: "CYBER MINER", limit: 250000 },
-    { name: "NEXUS WHALE", limit: 1000000 },
-    { name: "LEGEND", limit: 5000000 }
-];
-
-// ==========================================
-// ОТРИСОВКА ИНТЕРФЕЙСА (UI)
-// ==========================================
-function updateUI() { 
-    updateRank();
-    const L = langMap[currentLang];
-    const nameBox = document.getElementById('user-name');
-    if (nameBox && user) {
-        nameBox.innerText = `NEX | ${user.first_name.toUpperCase()}`;
-    }
-    
-    document.getElementById('nav-mining').querySelector('span').innerText = L.mining;
-    document.getElementById('nav-market').querySelector('span').innerText = L.market;
-    document.getElementById('nav-tasks').querySelector('span').innerText = L.tasks;
-    document.getElementById('lbl-energy').innerText = L.energy;
-    document.getElementById('lbl-sync').innerText = L.overdrive;
-    document.getElementById('m-sys-title').innerText = L.sys;
-    document.getElementById('m-market-title').innerText = L.market;
-    document.getElementById('m-tasks-title').innerText = L.tasks;
-    document.getElementById('m-rank-title').innerText = L.top;
-    document.getElementById('lbl-lang').innerText = L.lang;
-    document.getElementById('lbl-haptic').innerText = L.haptic;
-    document.getElementById('lang-btn').innerText = currentLang;
-    document.getElementById('haptic-btn').innerText = hapticEnabled ? "ON" : "OFF";
-
-    const dTitle = document.getElementById('m-donate-title');
-    const dDesc = document.getElementById('m-donate-desc');
-    const dCopy = document.getElementById('copy-addr-btn');
-    if (dTitle) dTitle.innerText = L.donateTitle;
-    if (dDesc) dDesc.innerText = L.donateDesc;
-    if (dCopy) dCopy.innerText = L.copyBtn;
-    
-    document.querySelectorAll('.close-btn-nexus').forEach(b => b.innerText = L.close);
-    document.getElementById('balance-value').innerText = Math.floor(balance).toLocaleString();
-    document.getElementById('energy-fill').style.width = (energy / 10) + "%";
-    document.getElementById('boost-fill').style.width = odCharge + "%";
-
-    const btn = document.getElementById('od-btn');
-    if (isOverdrive) btn.innerText = "OVERDRIVE!!";
-    else if (odCharge >= 100) btn.innerText = L.ready;
-    else btn.innerText = `${L.loading} ${Math.floor(odCharge)}%`;
-    btn.className = `sync-btn ${odCharge >= 100 ? 'ready' : ''} ${isOverdrive ? 'active' : ''}`;
-
-    renderMarket();
-    renderTasks();
-}
-
-function renderMarket() {
-    const L = langMap[currentLang];
-    const grid = document.getElementById('market-grid');
-    const now = Date.now();
-    
-    const multStatus = activeBoosts.multEnd > now ? " (ACTIVE)" : "";
-    const speedStatus = activeBoosts.speedEnd > now ? " (ACTIVE)" : "";
-
-    const premiumTexts = {
-        mult: currentLang === 'RU' ? { title: "МНОЖИТЕЛЬ X2 💎", desc: "ДВОЙНАЯ СИЛА НА 24 ЧАСА" } : { title: "X2 MULTIPLIER 💎", desc: "DOUBLE TAP FOR 24H" },
-        speed: currentLang === 'RU' ? { title: "КИБЕР-СКОРОСТЬ ⚡️", desc: "РЕГЕНЕРАЦИЯ X2 НА 24 ЧАСА" } : { title: "CYBER SPEED ⚡️", desc: "X2 REGEN FOR 24H" }
-    };
-
-    grid.innerHTML = `
-        <div class="card-nexus ${activeBoosts.multEnd > now ? 'boost-active' : ''}">
-            <div class="card-info">
-                <span class="card-title">${premiumTexts.mult.title}${multStatus}</span>
-                <span class="card-sub">${premiumTexts.mult.desc}</span>
-                <span class="card-price">1.0 TON</span>
-            </div>
-            <button class="nexus-btn-buy" onclick="buyWithUSDT('mult', 1)">${L.buyUSDT}</button>
-        </div>
-        <div class="card-nexus ${activeBoosts.speedEnd > now ? 'boost-active' : ''}">
-            <div class="card-info">
-                <span class="card-title">${premiumTexts.speed.title}${speedStatus}</span>
-                <span class="card-sub">${premiumTexts.speed.desc}</span>
-                <span class="card-price">2.0 TON</span>
-            </div>
-            <button class="nexus-btn-buy" onclick="buyWithUSDT('speed', 2)">${L.buyUSDT}</button>
-        </div>
-        <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 15px 0;">
-        <div class="card-nexus">
-            <div class="card-info">
-                <span class="card-title">NODE v.${upgrades.node.lvl}</span>
-                <span class="card-sub">${L.power}: +${upgrades.node.lvl}</span>
-                <span class="card-price">${L.cost}: ${upgrades.node.cost.toLocaleString()} N</span>
-            </div>
-            <button class="nexus-btn-buy" onclick="buyItem('node')">${L.buy}</button>
-        </div>
-        <div class="card-nexus">
-            <div class="card-info">
-                <span class="card-title">VPN v.${upgrades.vpn.lvl}</span>
-                <span class="card-sub">${L.inc}: +${upgrades.vpn.lvl}/SEC</span>
-                <span class="card-price">${L.cost}: ${upgrades.vpn.cost.toLocaleString()} N</span>
-            </div>
-            <button class="nexus-btn-buy" onclick="buyItem('vpn')">${L.buy}</button>
-        </div>
-    `;
-}
-
-async function buyWithUSDT(type, price) {
-    if (typeof tonConnectUI === 'undefined' || !tonConnectUI.account) {
-        tg.showPopup({
-            title: 'Nexus Wallet',
-            message: currentLang === 'RU' ? 'Сначала подключите кошелек!' : 'Please connect your wallet first!',
-            buttons: [{id: 'ok', type: 'default', text: 'OK'}]
-        });
-        return;
-    }
-    const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 300,
-        messages: [{
-            address: "UQB1fAh0XZ3paTUwJl8poaDG2H0cad4vJfy3bXdnyU5ZVIU3",
-            amount: (price * 1000000000).toString(), 
-        }]
-    };
-    try {
-        const result = await tonConnectUI.sendTransaction(transaction);
-        if (result) {
-            const dayInMs = 24 * 60 * 60 * 1000;
-            const now = Date.now();
-            if(type === 'mult') activeBoosts.multEnd = Math.max(activeBoosts.multEnd, now) + dayInMs;
-            if(type === 'speed') activeBoosts.speedEnd = Math.max(activeBoosts.speedEnd, now) + dayInMs;
-            localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
-            saveData(); updateUI();
-        }
-    } catch (e) {
-        console.error("Payment error:", e);
-    }
-}
-
-const touchZone = document.getElementById('touch-zone');
-if (touchZone) {
-    touchZone.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (energy < 2) return;
-        NexusGuard.lastClickTime = Date.now();
-        const coin = document.getElementById('coin-visual');
-        if(coin) coin.classList.add('pressed');
-        const now = Date.now();
-        const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            let t = e.changedTouches[i];
-            let pwr = (upgrades.node.lvl * upgrades.node.power * currentMult) * (isOverdrive ? 5 : 1);
-            if (Math.random() < 0.01) pwr *= 10;
-            Core.modifyBalance(pwr); 
-            Core.consumeEnergy(2);
-            if (!isOverdrive && odCharge < 100) odCharge += 0.4;
-            createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
-            spawnParticles(t.clientX, t.clientY);
-        }
-        if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
-    }, {passive: false});
-    touchZone.addEventListener('touchend', () => {
-        const coin = document.getElementById('coin-visual');
-        if(coin) coin.classList.remove('pressed');
-    });
-}
-
-setInterval(() => {
-    if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
-    const now = Date.now();
-    const regenStep = (activeBoosts.speedEnd > now) ? 1.5 : 0.5;
-    if (energy < 1000) energy = Math.min(1000, energy + regenStep);
-    if (!isOverdrive && odCharge > 0 && (now - NexusGuard.lastClickTime > 2000)) {
-        odCharge = Math.max(0, odCharge - 0.3);
-    }
-    localStorage.setItem('nexus_energy', energy);
-    updateUI();
-}, 100);
-
-// ==========================================
-// БЛОК ЗАДАЧ (С ИСПРАВЛЕННОЙ ПРОВЕРКОЙ)
-// ==========================================
-const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o";
-const CHANNEL_ID = "-1002086386401";
-
-function renderTasks() {
-    const L = langMap[currentLang];
-    const grid = document.getElementById('tasks-grid');
-    if (!grid) return;
-    const now = Date.now();
-    const canClaimDaily = (now - lastDailyClaim) > 86400000;
-    const dailyReward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
-    grid.innerHTML = `
-        <div class="card-nexus" style="border-color: #ffcc00; box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);">
-            <div class="card-info">
-                <span class="card-title">${L.daily} (Day ${dailyStreak + 1})</span>
-                <span class="card-sub">+${dailyReward.toLocaleString()} N</span>
-            </div>
-            <button class="nexus-btn-buy" ${!canClaimDaily ? 'disabled' : ''} onclick="claimDaily()">
-                ${canClaimDaily ? L.claim : L.wait}
-            </button>
-        </div>
-        <div class="card-nexus" style="border-color: #00d4ff; background: rgba(0, 212, 255, 0.05);">
-            <div class="card-info">
-                <span class="card-title">${L.refTask}</span>
-                <span class="card-sub">+50,000 N EACH</span>
-            </div>
-            <button class="nexus-btn-buy" onclick="copyRefLink()">${L.refCopy}</button>
-        </div>
-    `;
-    const tasks = [
-        { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_mining_hub' },
-        { id: 'invite', title: L.task2, reward: 15000, url: '' },
-        { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
-    ];
-    tasks.forEach(task => {
-        const isDone = tasksDone.includes(task.id);
-        grid.innerHTML += `<div class="card-nexus">
-            <div class="card-info">
-                <span class="card-title">${task.title}</span>
-                <span class="card-sub">+${task.reward.toLocaleString()} N</span>
-            </div>
-            <div style="display:flex; gap:5px;">
-                ${isDone ? `<button class="nexus-btn-buy" disabled>${L.claimed}</button>` : 
-                    `<button class="nexus-btn-buy" onclick="completeTask('${task.id}', ${task.reward}, '${task.url}')">${L.go}</button>
-                    <button class="nexus-btn-buy" style="background:#26a17b" id="check-${task.id}" onclick="verifyTask('${task.id}', ${task.reward})">${L.check}</button>`
+                saveData();
+            });
+        },
+        consumeEnergy: function(amount) {
+            return NexusShield.execute("Core_Energy", () => {
+                if (energy >= amount) {
+                    energy -= amount;
+                    updateUI();
+                    return true;
                 }
+                return false;
+            });
+        },
+        // Расчет дохода за время отсутствия
+        applyPassive: function() {
+            if (upgrades.vpn.lvl > 0) {
+                const now = Date.now();
+                const diff = Math.floor((now - lastTime) / 1000);
+                const earned = diff * (upgrades.vpn.lvl * 2);
+                if (earned > 0) {
+                    balance += earned;
+                    const msg = currentLang === 'RU' ? 
+                        `VPN намайнил: +${earned.toLocaleString()} N` : 
+                        `VPN mined: +${earned.toLocaleString()} N`;
+                    tg.showAlert(msg);
+                }
+            }
+        }
+    };
+
+    // ==========================================
+    // ЯЗЫКОВЫЕ ПАКЕТЫ
+    // ==========================================
+    const langMap = {
+        EN: {
+            mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
+            sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "CHARGE", ready: "READY!",
+            buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
+            task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
+            donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
+            daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "COPY LINK", wait: "WAIT",
+            go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!", lowBal: "NEED 100K ON BALANCE!"
+        },
+        RU: {
+            mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
+            sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАРЯД", ready: "ГОТОВО!",
+            buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
+            task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
+            donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
+            daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "КОПИРОВАТЬ ССЫЛКУ", wait: "ОЖИДАНИЕ",
+            go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!", lowBal: "НУЖНО 100К НА БАЛАНСЕ!"
+        }
+    };
+
+    const RANKS = [
+        { name: "ROOKIE", limit: 0 }, { name: "MINER", limit: 10000 }, { name: "PRO MINER", limit: 50000 },
+        { name: "CYBER MINER", limit: 250000 }, { name: "NEXUS WHALE", limit: 1000000 }, { name: "LEGEND", limit: 5000000 }
+    ];
+
+    // ==========================================
+    // UI (ОТРИСОВКА)
+    // ==========================================
+    window.updateUI = function() { 
+        updateRank();
+        const L = langMap[currentLang];
+        const nameBox = document.getElementById('user-name');
+        if (nameBox && user) nameBox.innerText = `NEX | ${user.first_name.toUpperCase()}`;
+        
+        document.getElementById('nav-mining').querySelector('span').innerText = L.mining;
+        document.getElementById('nav-market').querySelector('span').innerText = L.market;
+        document.getElementById('nav-tasks').querySelector('span').innerText = L.tasks;
+        document.getElementById('lbl-energy').innerText = L.energy;
+        document.getElementById('lbl-sync').innerText = L.overdrive;
+        document.getElementById('m-sys-title').innerText = L.sys;
+        document.getElementById('m-market-title').innerText = L.market;
+        document.getElementById('m-tasks-title').innerText = L.tasks;
+        document.getElementById('m-rank-title').innerText = L.top;
+        document.getElementById('lbl-lang').innerText = L.lang;
+        document.getElementById('lbl-haptic').innerText = L.haptic;
+        document.getElementById('lang-btn').innerText = currentLang;
+        document.getElementById('haptic-btn').innerText = hapticEnabled ? "ON" : "OFF";
+
+        const dTitle = document.getElementById('m-donate-title');
+        const dDesc = document.getElementById('m-donate-desc');
+        const dCopy = document.getElementById('copy-addr-btn');
+        if (dTitle) dTitle.innerText = L.donateTitle;
+        if (dDesc) dDesc.innerText = L.donateDesc;
+        if (dCopy) dCopy.innerText = L.copyBtn;
+        
+        document.querySelectorAll('.close-btn-nexus').forEach(b => b.innerText = L.close);
+        document.getElementById('balance-value').innerText = Math.floor(balance).toLocaleString();
+        document.getElementById('energy-fill').style.width = (energy / 10) + "%";
+        document.getElementById('boost-fill').style.width = odCharge + "%";
+
+        const btn = document.getElementById('od-btn');
+        if (isOverdrive) btn.innerText = "OVERDRIVE!!";
+        else if (odCharge >= 100) btn.innerText = L.ready;
+        else btn.innerText = `${L.loading} ${Math.floor(odCharge)}%`;
+        btn.className = `sync-btn ${odCharge >= 100 ? 'ready' : ''} ${isOverdrive ? 'active' : ''}`;
+
+        renderMarket();
+        renderTasks();
+    };
+
+    function renderMarket() {
+        const L = langMap[currentLang];
+        const grid = document.getElementById('market-grid');
+        const now = Date.now();
+        const multStatus = activeBoosts.multEnd > now ? " (ACTIVE)" : "";
+        const speedStatus = activeBoosts.speedEnd > now ? " (ACTIVE)" : "";
+
+        const premiumTexts = {
+            mult: currentLang === 'RU' ? { title: "МНОЖИТЕЛЬ X2 💎", desc: "ДВОЙНАЯ СИЛА НА 24 ЧАСА" } : { title: "X2 MULTIPLIER 💎", desc: "DOUBLE TAP FOR 24H" },
+            speed: currentLang === 'RU' ? { title: "КИБЕР-СКОРОСТЬ ⚡️", desc: "РЕГЕНЕРАЦИЯ X2 НА 24 ЧАСА" } : { title: "CYBER SPEED ⚡️", desc: "X2 REGEN FOR 24H" }
+        };
+
+        grid.innerHTML = `
+            <div class="card-nexus ${activeBoosts.multEnd > now ? 'boost-active' : ''}">
+                <div class="card-info">
+                    <span class="card-title">${premiumTexts.mult.title}${multStatus}</span>
+                    <span class="card-sub">${premiumTexts.mult.desc}</span>
+                    <span class="card-price">1.0 TON</span>
+                </div>
+                <button class="nexus-btn-buy" onclick="buyWithUSDT('mult', 1)">${L.buyUSDT}</button>
             </div>
-        </div>`;
-    });
-}
-
-function claimDaily() {
-    const now = Date.now();
-    if (now - lastDailyClaim < 86400000) return;
-    const reward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
-    Core.modifyBalance(reward);
-    lastDailyClaim = now; dailyStreak++;
-    localStorage.setItem('nexus_daily', lastDailyClaim);
-    localStorage.setItem('nexus_streak', dailyStreak);
-    tg.showAlert(`+${reward} N!`); updateUI();
-}
-
-function copyRefLink() {
-    const link = `https://t.me/nexus_protocol_bot/app?startapp=${user?.id || '0'}`;
-    navigator.clipboard.writeText(link).then(() => {
-        tg.showPopup({ message: currentLang === 'RU' ? "Ссылка скопирована!" : "Link copied!" });
-    });
-}
-
-let taskTimers = {}; 
-function completeTask(id, reward, url) {
-    if (!tasksDone.includes(id)) {
-        if (url && url !== '') window.open(url, '_blank');
-        taskTimers[id] = Date.now();
-        tg.showAlert(currentLang === 'RU' ? "Задание начато! Подождите 15 секунд." : "Task started! Wait 15s.");
+            <div class="card-nexus ${activeBoosts.speedEnd > now ? 'boost-active' : ''}">
+                <div class="card-info">
+                    <span class="card-title">${premiumTexts.speed.title}${speedStatus}</span>
+                    <span class="card-sub">${premiumTexts.speed.desc}</span>
+                    <span class="card-price">2.0 TON</span>
+                </div>
+                <button class="nexus-btn-buy" onclick="buyWithUSDT('speed', 2)">${L.buyUSDT}</button>
+            </div>
+            <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 15px 0;">
+            <div class="card-nexus">
+                <div class="card-info">
+                    <span class="card-title">NODE v.${upgrades.node.lvl}</span>
+                    <span class="card-sub">${L.power}: +${upgrades.node.lvl}</span>
+                    <span class="card-price">${L.cost}: ${upgrades.node.cost.toLocaleString()} N</span>
+                </div>
+                <button class="nexus-btn-buy" onclick="buyItem('node')">${L.buy}</button>
+            </div>
+            <div class="card-nexus">
+                <div class="card-info">
+                    <span class="card-title">VPN v.${upgrades.vpn.lvl}</span>
+                    <span class="card-sub">${L.inc}: +${upgrades.vpn.lvl}/SEC</span>
+                    <span class="card-price">${L.cost}: ${upgrades.vpn.cost.toLocaleString()} N</span>
+                </div>
+                <button class="nexus-btn-buy" onclick="buyItem('vpn')">${L.buy}</button>
+            </div>
+        `;
     }
-}
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ПРОВЕРКИ
-async function verifyTask(id, reward) {
-    const L = langMap[currentLang];
-    const checkBtn = document.getElementById(`check-${id}`);
-    if(checkBtn) { checkBtn.disabled = true; checkBtn.innerText = L.checking; }
-
-    // --- ПРОВЕРКА ЗАДАНИЯ НА 100К (ПО БАЛАНСУ) ---
-    if (id === 'reach100k') {
-        if (balance >= 100000) {
-            grantReward(id, reward);
-        } else {
-            tg.showAlert(L.lowBal);
-            if(checkBtn) { checkBtn.disabled = false; checkBtn.innerText = L.check; }
+    // ==========================================
+    // ПЛАТЕЖИ И КРИПТО
+    // ==========================================
+    window.buyWithUSDT = async function(type, price) {
+        if (typeof tonConnectUI === 'undefined' || !tonConnectUI.account) {
+            tg.showPopup({ message: currentLang === 'RU' ? 'Сначала подключите кошелек!' : 'Please connect your wallet first!' });
+            return;
         }
-        return;
+        const transaction = {
+            validUntil: Math.floor(Date.now() / 1000) + 300,
+            messages: [{
+                address: "UQB1fAh0XZ3paTUwJl8poaDG2H0cad4vJfy3bXdnyU5ZVIU3",
+                amount: (price * 1000000000).toString(), 
+            }]
+        };
+        try {
+            const result = await tonConnectUI.sendTransaction(transaction);
+            if (result) {
+                const dayInMs = 24 * 60 * 60 * 1000;
+                const now = Date.now();
+                if(type === 'mult') activeBoosts.multEnd = Math.max(activeBoosts.multEnd, now) + dayInMs;
+                if(type === 'speed') activeBoosts.speedEnd = Math.max(activeBoosts.speedEnd, now) + dayInMs;
+                saveData(); updateUI();
+            }
+        } catch (e) { console.error("Payment error:", e); }
+    };
+
+    // ==========================================
+    // ТАЧ-ЛОГИКА
+    // ==========================================
+    const touchZone = document.getElementById('touch-zone');
+    if (touchZone) {
+        touchZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (energy < 2) return;
+            NexusGuard.lastClickTime = Date.now();
+            const coin = document.getElementById('coin-visual');
+            if(coin) coin.classList.add('pressed');
+            const now = Date.now();
+            const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let t = e.changedTouches[i];
+                let pwr = (upgrades.node.lvl * upgrades.node.power * currentMult) * (isOverdrive ? 5 : 1);
+                if (Math.random() < 0.01) pwr *= 10;
+                Core.modifyBalance(pwr); Core.consumeEnergy(2);
+                if (!isOverdrive && odCharge < 100) odCharge += 0.4;
+                createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
+                spawnParticles(t.clientX, t.clientY);
+            }
+            if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+        }, {passive: false});
+        touchZone.addEventListener('touchend', () => {
+            document.getElementById('coin-visual')?.classList.remove('pressed');
+        });
     }
 
-    // --- ПРОВЕРКА ПОДПИСКИ (ПО API) ---
-    const startTime = taskTimers[id];
-    if (!startTime) {
-        tg.showAlert(L.go + " first!");
-        if(checkBtn) { checkBtn.disabled = false; checkBtn.innerText = L.check; }
-        return;
-    }
-    if (Date.now() - startTime < 15000) {
-        tg.showAlert(L.wait);
-        if(checkBtn) { checkBtn.disabled = false; checkBtn.innerText = L.check; }
-        return;
+    // ==========================================
+    // ЗАДАНИЯ И ПРОВЕРКА
+    // ==========================================
+    function renderTasks() {
+        const L = langMap[currentLang];
+        const grid = document.getElementById('tasks-grid');
+        if (!grid) return;
+        const now = Date.now();
+        const canClaimDaily = (now - lastDailyClaim) > 86400000;
+        const dailyReward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
+
+        grid.innerHTML = `
+            <div class="card-nexus" style="border-color: #ffcc00;">
+                <div class="card-info">
+                    <span class="card-title">${L.daily} (Day ${dailyStreak + 1})</span>
+                    <span class="card-sub">+${dailyReward.toLocaleString()} N</span>
+                </div>
+                <button class="nexus-btn-buy" ${!canClaimDaily ? 'disabled' : ''} onclick="claimDaily()">${canClaimDaily ? L.claim : L.wait}</button>
+            </div>
+            <div class="card-nexus" style="border-color: #00d4ff;">
+                <div class="card-info">
+                    <span class="card-title">${L.refTask}</span>
+                    <span class="card-sub">+50,000 N EACH</span>
+                </div>
+                <button class="nexus-btn-buy" onclick="copyRefLink()">${L.refCopy}</button>
+            </div>
+        `;
+
+        const tasks = [
+            { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_mining_hub' },
+            { id: 'invite', title: L.task2, reward: 15000, url: '' },
+            { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
+        ];
+
+        tasks.forEach(task => {
+            const isDone = tasksDone.includes(task.id);
+            grid.innerHTML += `<div class="card-nexus">
+                <div class="card-info">
+                    <span class="card-title">${task.title}</span>
+                    <span class="card-sub">+${task.reward.toLocaleString()} N</span>
+                </div>
+                <div style="display:flex; gap:5px;">
+                    ${isDone ? `<button class="nexus-btn-buy" disabled>${L.claimed}</button>` : 
+                        `<button class="nexus-btn-buy" onclick="completeTask('${task.id}', ${task.reward}, '${task.url}')">${L.go}</button>
+                        <button class="nexus-btn-buy" style="background:#26a17b" id="check-${task.id}" onclick="verifyTask('${task.id}', ${task.reward})">${L.check}</button>`
+                    }
+                </div>
+            </div>`;
+        });
     }
 
-    try {
-        const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${CHANNEL_ID}&user_id=${user.id}`);
-        const data = await response.json();
-        const validStatuses = ['member', 'administrator', 'creator'];
-        if (data.ok && validStatuses.includes(data.result.status)) {
-            grantReward(id, reward);
-        } else {
-            tg.showAlert(L.notSub);
-            if(checkBtn) { checkBtn.disabled = false; checkBtn.innerText = L.check; }
+    window.verifyTask = async function(id, reward) {
+        const L = langMap[currentLang];
+        const btn = document.getElementById(`check-${id}`);
+        if(btn) { btn.disabled = true; btn.innerText = L.checking; }
+
+        if (id === 'reach100k') {
+            if (balance >= 100000) grantReward(id, reward);
+            else { tg.showAlert(L.lowBal); if(btn){btn.disabled=false; btn.innerText=L.check;} }
+            return;
         }
-    } catch (e) {
-        console.error("Verify Error:", e);
-        tg.showAlert("API Error. Try later.");
-        if(checkBtn) { checkBtn.disabled = false; checkBtn.innerText = L.check; }
-    }
-}
 
-function grantReward(id, reward) {
-    if (!tasksDone.includes(id)) {
-        Core.modifyBalance(reward);
-        tasksDone.push(id);
+        const startTime = taskTimers[id];
+        if (!startTime) { tg.showAlert(L.go + " first!"); if(btn){btn.disabled=false; btn.innerText=L.check;} return; }
+        if (Date.now() - startTime < 15000) { tg.showAlert(L.wait); if(btn){btn.disabled=false; btn.innerText=L.check;} return; }
+
+        try {
+            const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${CHANNEL_ID}&user_id=${user.id}`);
+            const data = await res.json();
+            if (data.ok && ['member', 'administrator', 'creator'].includes(data.result.status)) {
+                grantReward(id, reward);
+            } else {
+                tg.showAlert(L.notSub); if(btn){btn.disabled=false; btn.innerText=L.check;}
+            }
+        } catch (e) { tg.showAlert("API Error"); if(btn){btn.disabled=false; btn.innerText=L.check;} }
+    };
+
+    function grantReward(id, reward) {
+        if (!tasksDone.includes(id)) {
+            balance += reward; tasksDone.push(id);
+            saveData(); updateUI(); tg.showAlert(`+${reward} N!`);
+        }
+    }
+
+    window.claimDaily = function() {
+        const now = Date.now();
+        if (now - lastDailyClaim < 86400000) return;
+        const reward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
+        balance += reward; lastDailyClaim = now; dailyStreak++;
+        saveData(); updateUI(); tg.showAlert(`+${reward} N!`);
+    };
+
+    window.completeTask = function(id, reward, url) {
+        if (!tasksDone.includes(id)) {
+            if (url && url !== '') window.open(url, '_blank');
+            taskTimers[id] = Date.now();
+            tg.showAlert(currentLang === 'RU' ? "Задание начато! Ожидание 15с." : "Started! Wait 15s.");
+        }
+    };
+
+    window.copyRefLink = function() {
+        const link = `https://t.me/nexus_protocol_bot/app?startapp=${user?.id || '0'}`;
+        navigator.clipboard.writeText(link).then(() => {
+            tg.showPopup({ message: currentLang === 'RU' ? "Ссылка скопирована!" : "Link copied!" });
+        });
+    };
+
+    // ==========================================
+    // СИСТЕМНЫЕ ФУНКЦИИ
+    // ==========================================
+    window.buyItem = function(type) {
+        let u = upgrades[type];
+        if (balance >= u.cost) {
+            balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
+            saveData(); updateUI();
+        } else { tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!"); }
+    };
+
+    window.saveData = function() {
+        localStorage.setItem('nexus_bal', balance);
+        localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
         localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-        tg.showAlert(`+${reward} N!`);
-        updateUI();
+        localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
+        localStorage.setItem('nexus_last_time', Date.now());
+        localStorage.setItem('nexus_version', GAME_VERSION);
+        localStorage.setItem('nexus_energy', energy);
+        localStorage.setItem('nexus_daily', lastDailyClaim);
+        localStorage.setItem('nexus_streak', dailyStreak);
+        if (typeof db !== 'undefined' && user?.id) {
+            db.ref('users/' + user.id).update({ balance: balance, v: GAME_VERSION });
+        }
+    };
+
+    window.loadLeaderboard = function() {
+        if (typeof db === 'undefined') return;
+        const container = document.getElementById('leaderboard-list');
+        if (!container) return;
+        container.innerHTML = "SYNCING...";
+        db.ref('users').orderByChild('balance').limitToLast(50).once('value', (snap) => {
+            const players = []; snap.forEach((child) => { players.push(child.val()); });
+            players.reverse(); renderLeaderboard(players);
+        });
+    };
+
+    function renderLeaderboard(players) {
+        const container = document.getElementById('leaderboard-list');
+        if (!container) return; container.innerHTML = "";
+        players.forEach((p, i) => {
+            const div = document.createElement('div'); div.className = 'card-nexus';
+            div.style.marginBottom = "5px";
+            div.innerHTML = `<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                <span style="color:#00f2ff; font-weight:bold;">#${i+1}</span>
+                <span style="flex-grow:1; margin-left:10px;">${(p.name || 'ANON').toUpperCase()}</span>
+                <span style="font-weight:bold;">${Math.floor(p.balance).toLocaleString()} N</span>
+            </div>`;
+            container.appendChild(div);
+        });
     }
-}
 
-function checkReferral() {
-    const startParam = tg.initDataUnsafe?.start_param;
-    if (startParam && !refClaimed) {
-        Core.modifyBalance(50000);
-        refClaimed = true;
-        localStorage.setItem('nexus_ref_claimed', 'true');
-        tg.showAlert("+50,000 N!");
-    }
-}
+    window.toggleModal = function(id) {
+        const m = document.getElementById(id);
+        if(m) {
+            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+            if (id === 'rank-modal' && m.style.display === 'flex') loadLeaderboard();
+        }
+    };
 
-function buyItem(type) {
-    let u = upgrades[type];
-    if (balance >= u.cost) {
-        balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
-        saveData(); updateUI(); 
-    } else {
-        tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!");
-    }
-}
+    window.changeLanguage = function() { currentLang = currentLang === 'EN' ? 'RU' : 'EN'; localStorage.setItem('nx_lang', currentLang); updateUI(); };
+    window.toggleHaptic = function() { hapticEnabled = !hapticEnabled; localStorage.setItem('nx_haptic', hapticEnabled?'on':'off'); updateUI(); };
 
-function saveData() {
-    localStorage.setItem('nexus_bal', balance);
-    localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
-    localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-    localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
-    localStorage.setItem('nexus_version', GAME_VERSION);
-    if (typeof db !== 'undefined' && user?.id) {
-        db.ref('users/' + user.id).update({ balance: balance, v: GAME_VERSION });
-    }
-}
-
-function toggleModal(id) {
-    const m = document.getElementById(id);
-    if(m) {
-        m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-        if (id === 'rank-modal' && m.style.display === 'flex') loadLeaderboard();
-    }
-}
-
-function loadLeaderboard() {
-    if (typeof db === 'undefined') return;
-    const container = document.getElementById('leaderboard-list');
-    if (!container) return;
-    container.innerHTML = "SYNCING...";
-    db.ref('users').orderByChild('balance').limitToLast(50).once('value', (snap) => {
-        const players = []; snap.forEach((child) => { players.push(child.val()); });
-        players.reverse(); renderLeaderboard(players);
-    });
-}
-
-function renderLeaderboard(players) {
-    const container = document.getElementById('leaderboard-list');
-    if (!container) return; container.innerHTML = "";
-    players.forEach((p, i) => {
-        const div = document.createElement('div'); div.className = 'card-nexus';
-        div.style.marginBottom = "5px";
-        div.innerHTML = `<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-            <span style="color:#00f2ff; font-weight:bold;">#${i+1}</span>
-            <span style="flex-grow:1; margin-left:10px;">${(p.name || 'ANON').toUpperCase()}</span>
-            <span style="font-weight:bold;">${Math.floor(p.balance).toLocaleString()} N</span>
-        </div>`;
-        container.appendChild(div);
-    });
-}
-
-function changeLanguage() { currentLang = currentLang === 'EN' ? 'RU' : 'EN'; localStorage.setItem('nx_lang', currentLang); updateUI(); }
-function toggleHaptic() { hapticEnabled = !hapticEnabled; localStorage.setItem('nx_haptic', hapticEnabled?'on':'off'); updateUI(); }
-
-function createPop(x, y, v, isCrit) {
-    const p = document.createElement('div'); p.className = 'floating-text';
-    p.innerText = isCrit ? '+' + v + ' 🔥' : '+' + v;
-    p.style.left = x + 'px'; p.style.top = y + 'px';
-    document.body.appendChild(p); setTimeout(() => p.remove(), 600);
-}
-
-function spawnParticles(x, y) {
-    for (let i = 0; i < 6; i++) {
-        const p = document.createElement('div'); p.className = 'particle';
+    // ==========================================
+    // ВИЗУАЛ
+    // ==========================================
+    function createPop(x, y, v, isCrit) {
+        const p = document.createElement('div'); p.className = 'floating-text';
+        p.innerText = isCrit ? '+' + v + ' 🔥' : '+' + v;
         p.style.left = x + 'px'; p.style.top = y + 'px';
-        const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 40;
-        p.animate([{ opacity: 1 }, { transform: `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity: 0 }], 500);
-        document.body.appendChild(p); setTimeout(() => p.remove(), 500);
+        document.body.appendChild(p); setTimeout(() => p.remove(), 600);
     }
-}
 
-function activateOverdrive() {
-    if (odCharge >= 100 && !isOverdrive) {
-        isOverdrive = true;
-        let drain = setInterval(() => {
-            odCharge -= 2;
-            if (odCharge <= 0) { odCharge = 0; isOverdrive = false; clearInterval(drain); }
-            updateUI();
-        }, 100);
+    function spawnParticles(x, y) {
+        for (let i = 0; i < 6; i++) {
+            const p = document.createElement('div'); p.className = 'particle';
+            p.style.left = x + 'px'; p.style.top = y + 'px';
+            const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 40;
+            p.animate([{ opacity: 1 }, { transform: `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity: 0 }], 500);
+            document.body.appendChild(p); setTimeout(() => p.remove(), 500);
+        }
     }
-}
 
-function updateRank() {
-    let rank = RANKS[0].name;
-    for (let i = RANKS.length-1; i>=0; i--) { if(balance >= RANKS[i].limit) { rank = RANKS[i].name; break; } }
-    const rb = document.getElementById('rank-badge'); if(rb) rb.innerText = `RANK: ${rank}`;
-}
+    window.activateOverdrive = function() {
+        if (odCharge >= 100 && !isOverdrive) {
+            isOverdrive = true;
+            let drain = setInterval(() => {
+                odCharge -= 2;
+                if (odCharge <= 0) { odCharge = 0; isOverdrive = false; clearInterval(drain); }
+                updateUI();
+            }, 100);
+        }
+    };
 
-document.addEventListener('DOMContentLoaded', () => { 
-    if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
-    checkReferral(); updateUI(); 
-});
+    function updateRank() {
+        let rank = RANKS[0].name;
+        for (let i = RANKS.length-1; i>=0; i--) { if(balance >= RANKS[i].limit) { rank = RANKS[i].name; break; } }
+        const rb = document.getElementById('rank-badge'); if(rb) rb.innerText = `RANK: ${rank}`;
+    }
+
+    // ==========================================
+    // ИНИЦИАЛИЗАЦИЯ И ТАЙМЕРЫ
+    // ==========================================
+    setInterval(() => {
+        if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
+        const now = Date.now();
+        const regenStep = (activeBoosts.speedEnd > now) ? 1.5 : 0.5;
+        if (energy < 1000) energy = Math.min(1000, energy + regenStep);
+        if (!isOverdrive && odCharge > 0 && (now - NexusGuard.lastClickTime > 2000)) {
+            odCharge = Math.max(0, odCharge - 0.3);
+        }
+        updateUI();
+    }, 100);
+
+    setInterval(saveData, 10000); // Автосохранение раз в 10 сек
+
+    document.addEventListener('DOMContentLoaded', () => { 
+        if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
+        
+        // Реферальный бонус
+        const sp = tg.initDataUnsafe?.start_param;
+        if (sp && !refClaimed) {
+            balance += 50000; refClaimed = true;
+            localStorage.setItem('nexus_ref_claimed', 'true');
+            tg.showAlert("+50,000 N!");
+        }
+
+        Core.applyPassive(); // Считаем оффлайн доход
+        updateUI(); 
+    });
+
+})();
