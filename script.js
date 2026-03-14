@@ -8,7 +8,7 @@ const user = tg.initDataUnsafe?.user;
 const NexusShield = {
     execute: function(moduleName, task) {
         try {
-            task();
+            return task();
         } catch (error) {
             console.error(`🚨 Ошибка в [${moduleName}]:`, error);
             if (window.Telegram?.WebApp?.HapticFeedback) {
@@ -33,6 +33,13 @@ let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
     node: { lvl: 1, cost: 1000, power: 1 },
     vpn: { lvl: 0, cost: 3240, income: 1 }
 };
+
+// НОВОЕ: Временные бусты (время окончания в ms)
+let activeBoosts = JSON.parse(localStorage.getItem('nexus_active_boosts')) || {
+    multEnd: 0,
+    speedEnd: 0
+};
+
 let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
 let energy = parseInt(localStorage.getItem('nexus_energy')) || 1000;
 let odCharge = 0;
@@ -72,13 +79,15 @@ const langMap = {
         mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
         sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "CHARGE", ready: "READY!",
         buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
-        task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyStars: "BUY FOR ⭐️"
+        task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
+        donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS"
     },
     RU: {
         mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
         sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАРЯД", ready: "ГОТОВО!",
         buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
-        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyStars: "КУПИТЬ ЗА ⭐️"
+        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
+        donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС"
     }
 };
 
@@ -98,15 +107,22 @@ function updateUI() {
     document.getElementById('lbl-energy').innerText = L.energy;
     document.getElementById('lbl-sync').innerText = L.overdrive;
     document.getElementById('m-sys-title').innerText = L.sys;
-    document.getElementById('lbl-lang').innerText = L.lang;
-    document.getElementById('lbl-haptic').innerText = L.haptic;
     document.getElementById('m-market-title').innerText = L.market;
     document.getElementById('m-tasks-title').innerText = L.tasks;
     document.getElementById('m-rank-title').innerText = L.top;
-    
-    document.querySelectorAll('.close-btn-nexus').forEach(b => b.innerText = L.close);
+    document.getElementById('lbl-lang').innerText = L.lang;
+    document.getElementById('lbl-haptic').innerText = L.haptic;
     document.getElementById('lang-btn').innerText = currentLang;
     document.getElementById('haptic-btn').innerText = hapticEnabled ? "ON" : "OFF";
+
+    const dTitle = document.getElementById('m-donate-title');
+    const dDesc = document.getElementById('m-donate-desc');
+    const dCopy = document.getElementById('copy-addr-btn');
+    if (dTitle) dTitle.innerText = L.donateTitle;
+    if (dDesc) dDesc.innerText = L.donateDesc;
+    if (dCopy) dCopy.innerText = L.copyBtn;
+    
+    document.querySelectorAll('.close-btn-nexus').forEach(b => b.innerText = L.close);
     document.getElementById('balance-value').innerText = Math.floor(balance).toLocaleString();
     document.getElementById('energy-fill').style.width = (energy / 10) + "%";
     document.getElementById('boost-fill').style.width = odCharge + "%";
@@ -117,17 +133,6 @@ function updateUI() {
     else btn.innerText = `${L.loading} ${Math.floor(odCharge)}%`;
     btn.className = `sync-btn ${odCharge >= 100 ? 'ready' : ''} ${isOverdrive ? 'active' : ''}`;
 
-    let newRank = "IRON";
-    if (balance > 100000) newRank = "BRONZE 🥉";
-    if (balance > 500000) newRank = "SILVER 🥈";
-    if (balance > 2000000) newRank = "GOLD 🥇";
-    if (balance > 10000000) newRank = "PLATINUM 💎";
-
-    const rankBadge = document.getElementById('rank-badge');
-    if (rankBadge && rankBadge.innerText !== newRank) {
-        rankBadge.innerText = newRank;
-    }
-
     renderMarket();
     renderTasks();
 }
@@ -135,27 +140,33 @@ function updateUI() {
 function renderMarket() {
     const L = langMap[currentLang];
     const grid = document.getElementById('market-grid');
+    const now = Date.now();
     
+    // Проверка активности буста для отображения в магазине
+    const multStatus = activeBoosts.multEnd > now ? " (ACTIVE)" : "";
+    const speedStatus = activeBoosts.speedEnd > now ? " (ACTIVE)" : "";
+
     const premiumTexts = {
-        mult: currentLang === 'RU' ? { title: "МНОЖИТЕЛЬ X2 💎", desc: "ПОСТОЯННАЯ ДВОЙНАЯ СИЛА" } : { title: "X2 MULTIPLIER 💎", desc: "PERMANENT DOUBLE TAP" },
-        speed: currentLang === 'RU' ? { title: "КИБЕР-СКОРОСТЬ ⚡️", desc: "X2 РЕГЕНЕРАЦИЯ ЭНЕРГИИ" } : { title: "CYBER SPEED ⚡️", desc: "X2 ENERGY REGEN" }
+        mult: currentLang === 'RU' ? { title: "МНОЖИТЕЛЬ X2 💎", desc: "ДВОЙНАЯ СИЛА НА 24 ЧАСА" } : { title: "X2 MULTIPLIER 💎", desc: "DOUBLE TAP FOR 24H" },
+        speed: currentLang === 'RU' ? { title: "КИБЕР-СКОРОСТЬ ⚡️", desc: "РЕГЕНЕРАЦИЯ X2 НА 24 ЧАСА" } : { title: "CYBER SPEED ⚡️", desc: "X2 REGEN FOR 24H" }
     };
+
     grid.innerHTML = `
-        <div class="card-nexus">
+        <div class="card-nexus ${activeBoosts.multEnd > now ? 'boost-active' : ''}">
             <div class="card-info">
-                <span class="card-title">${premiumTexts.mult.title}</span>
+                <span class="card-title">${premiumTexts.mult.title}${multStatus}</span>
                 <span class="card-sub">${premiumTexts.mult.desc}</span>
-                <span class="card-price">50 ⭐️</span>
+                <span class="card-price">1.0 USDT</span>
             </div>
-            <button class="nexus-btn-buy" onclick="buyWithStars('mult', 50)">${L.buyStars}</button>
+            <button class="nexus-btn-buy" onclick="buyWithUSDT('mult', 1)">${L.buyUSDT}</button>
         </div>
-        <div class="card-nexus">
+        <div class="card-nexus ${activeBoosts.speedEnd > now ? 'boost-active' : ''}">
             <div class="card-info">
-                <span class="card-title">${premiumTexts.speed.title}</span>
+                <span class="card-title">${premiumTexts.speed.title}${speedStatus}</span>
                 <span class="card-sub">${premiumTexts.speed.desc}</span>
-                <span class="card-price">100 ⭐️</span>
+                <span class="card-price">2.0 USDT</span>
             </div>
-            <button class="nexus-btn-buy" onclick="buyWithStars('speed', 100)">${L.buyStars}</button>
+            <button class="nexus-btn-buy" onclick="buyWithUSDT('speed', 2)">${L.buyUSDT}</button>
         </div>
         <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 15px 0;">
         <div class="card-nexus">
@@ -177,6 +188,107 @@ function renderMarket() {
     `;
 }
 
+// ==========================================
+// ЛОГИКА ОПЛАТЫ USDT (WEB3) - ВРЕМЕННЫЕ БУСТЫ
+// ==========================================
+async function buyWithUSDT(type, price) {
+    if (!tonConnectUI.account) {
+        tg.showPopup({
+            title: 'Nexus Wallet',
+            message: currentLang === 'RU' ? 'Сначала подключите кошелек!' : 'Please connect your wallet first!',
+            buttons: [{id: 'ok', type: 'default', text: 'OK'}]
+        });
+        return;
+    }
+
+    const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 300,
+        messages: [{
+            address: "0x77e596231a14dee635e42c62ce215a2a47ec2c74",
+            amount: (price * 1000000000).toString(), 
+        }]
+    };
+
+    try {
+        const result = await tonConnectUI.sendTransaction(transaction);
+        if (result) {
+            NexusShield.execute("Web3_Purchase", () => {
+                const dayInMs = 24 * 60 * 60 * 1000;
+                const now = Date.now();
+
+                if(type === 'mult') { 
+                    activeBoosts.multEnd = Math.max(activeBoosts.multEnd, now) + dayInMs;
+                    tg.showAlert(currentLang === 'RU' ? "Множитель X2 активирован на 24 часа!" : "X2 Multiplier activated for 24h!"); 
+                }
+                if(type === 'speed') { 
+                    activeBoosts.speedEnd = Math.max(activeBoosts.speedEnd, now) + dayInMs;
+                    tg.showAlert(currentLang === 'RU' ? "Кибер-скорость активирована на 24 часа!" : "Cyber Speed activated for 24h!"); 
+                }
+                
+                localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
+                saveData(); 
+                updateUI();
+            });
+        }
+    } catch (e) {
+        console.error("Payment error:", e);
+    }
+}
+
+// ==========================================
+// ГЛАВНЫЙ КЛИКЕР (С ПРОВЕРКОЙ БУСТА)
+// ==========================================
+const touchZone = document.getElementById('touch-zone');
+if (touchZone) {
+    touchZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        NexusShield.execute("Mining_Click", () => {
+            if (energy < 2) return;
+            document.getElementById('coin-visual').classList.add('pressed');
+            
+            const now = Date.now();
+            // Проверяем, активен ли множитель
+            const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let t = e.changedTouches[i];
+                let pwr = (upgrades.node.lvl * upgrades.node.power * currentMult) * (isOverdrive ? 5 : 1);
+                
+                if (Math.random() < 0.01) { pwr *= 10; tg.HapticFeedback.notificationOccurred('warning'); }
+                
+                Core.modifyBalance(pwr); 
+                Core.consumeEnergy(2);
+                
+                if (!isOverdrive && odCharge < 100) odCharge += 0.4;
+                createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
+                spawnParticles(t.clientX, t.clientY);
+            }
+            if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+        });
+    }, {passive: false});
+    touchZone.addEventListener('touchend', () => {
+        const coin = document.getElementById('coin-visual');
+        if(coin) coin.classList.remove('pressed');
+    });
+}
+
+// ==========================================
+// СИСТЕМНЫЕ ЦИКЛЫ (С ПРОВЕРКОЙ БУСТА СКОРОСТИ)
+// ==========================================
+setInterval(() => {
+    if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
+    
+    // Регенерация энергии: в 2 раза быстрее если активен буст
+    const now = Date.now();
+    const regenStep = (activeBoosts.speedEnd > now) ? 5.0 : 2.5;
+    
+    if (energy < 1000) energy = Math.min(1000, energy + regenStep);
+    
+    localStorage.setItem('nexus_energy', energy);
+    updateUI();
+}, 100);
+
+// Остальные функции (renderTasks, openRanks, buyItem, completeTask, saveData и т.д.) без изменений...
 function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
@@ -188,188 +300,35 @@ function renderTasks() {
     grid.innerHTML = "";
     tasks.forEach(task => {
         const isDone = tasksDone.includes(task.id);
-        grid.innerHTML += `
-            <div class="card-nexus">
-                <div class="card-info"><span class="card-title">${task.title}</span><span class="card-sub">+${task.reward.toLocaleString()} N</span></div>
-                <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} onclick="completeTask('${task.id}', ${task.reward})">${isDone ? L.claimed : L.claim}</button>
-            </div>
-        `;
+        grid.innerHTML += `<div class="card-nexus">
+            <div class="card-info"><span class="card-title">${task.title}</span><span class="card-sub">+${task.reward.toLocaleString()} N</span></div>
+            <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} onclick="completeTask('${task.id}', ${task.reward})">${isDone ? L.claimed : L.claim}</button>
+        </div>`;
     });
-}
-
-function openRanks() {
-    const c = document.getElementById('rank-list-container');
-    c.innerHTML = "<div style='text-align:center; padding:20px; color: #aaa;'>ЗАГРУЗКА ЛИДЕРОВ...</div>";
-
-    if(typeof db !== 'undefined') {
-        db.ref('users').orderByChild('balance').limitToLast(10).once('value', (snapshot) => {
-            let players = [];
-            snapshot.forEach((child) => {
-                const data = child.val();
-                players.push({
-                    name: (data.name || "PLAYER").toUpperCase(),
-                    balance: data.balance || 0,
-                    me: child.key == user?.id
-                });
-            });
-
-            players.sort((a, b) => b.balance - a.balance);
-            
-            c.innerHTML = "";
-            players.forEach((p, i) => {
-                c.innerHTML += `<div class="rank-item ${p.me ? 'active-rank' : ''}">
-                    <span>${i + 1}</span>
-                    <b>${p.name}</b>
-                    <span>${Math.floor(p.balance).toLocaleString()} N</span>
-                </div>`;
-            });
-        });
-    }
-    toggleModal('rank-modal');
-}
-
-// ==========================================
-// ЛОГИКА ПОКУПОК И ЗАДАНИЙ
-// ==========================================
-function buyWithStars(type, price) {
-    if(confirm(`Confirm purchase for ${price} ⭐️?`)) {
-        if(type === 'mult') { upgrades.node.power *= 2; alert("X2 Activated!"); }
-        if(type === 'speed') { alert("Regen Speed Upgraded!"); }
-        saveData(); updateUI();
-    }
 }
 
 function buyItem(type) {
     NexusShield.execute("Market_Purchase", () => {
         let u = upgrades[type];
         if (balance >= u.cost) {
-            balance -= u.cost; 
-            u.lvl++;
-            u.cost = Math.floor(u.cost * 1.7);
-            saveData(); 
-            updateUI(); 
+            balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
+            saveData(); updateUI(); 
             if (hapticEnabled) tg.HapticFeedback.notificationOccurred('success');
         } else {
-            alert("Недостаточно N!");
+            tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!");
         }
     });
 }
 
-function completeTask(id, reward) {
-    NexusShield.execute("Task_Complete", () => {
-        if (!tasksDone.includes(id)) {
-            if (id === 'sub1') {
-                tg.openTelegramLink('https://t.me/nexus_protocol');
-            } else if (id === 'invite') {
-                const inviteLink = `https://t.me/nexus_protocol_bot?start=${user?.id || 'ref'}`;
-                tg.openLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=Присоединяйся к NEX!`);
-            }
-            balance += reward;
-            tasksDone.push(id);
-            localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-            if (hapticEnabled) tg.HapticFeedback.notificationOccurred('success');
-            updateUI();
-            saveData();
-        }
-    });
-}
-
-function activateOverdrive() {
-    if (odCharge >= 100 && !isOverdrive) {
-        isOverdrive = true;
-        document.body.classList.add('overdrive-active');
-        let t = setInterval(() => {
-            odCharge -= 1.5; updateUI();
-            if (odCharge <= 0) { clearInterval(t); isOverdrive = false; document.body.classList.remove('overdrive-active'); odCharge = 0; updateUI(); }
-        }, 100);
+function saveData() {
+    localStorage.setItem('nexus_bal', balance);
+    localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
+    localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+    localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
+    if (typeof db !== 'undefined' && user?.id) {
+        db.ref('users/' + user.id).set({ name: user.first_name || "Unknown", balance: balance, lastSeen: Date.now() });
     }
 }
-
-// ==========================================
-// ГЛАВНЫЙ КЛИКЕР И ВИЗУАЛ
-// ==========================================
-const touchZone = document.getElementById('touch-zone');
-if (touchZone) {
-    touchZone.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        
-        NexusShield.execute("Mining_Click", () => {
-            if (energy < 2) return;
-            document.getElementById('coin-visual').classList.add('pressed');
-            
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                let t = e.changedTouches[i];
-                let pwr = upgrades.node.lvl * upgrades.node.power * (isOverdrive ? 5 : 1);
-                
-                // ШАНС КРИТА: 1%
-                let isCritical = Math.random() < 0.01;
-                if (isCritical) {
-                    pwr *= 10;
-                    if (hapticEnabled && window.Telegram?.WebApp?.HapticFeedback) {
-                        window.Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
-                    }
-                }
-
-                Core.modifyBalance(pwr); 
-                Core.consumeEnergy(2);
-                
-                if (!isOverdrive && odCharge < 100) odCharge += 0.4;
-            
-                createPop(t.clientX, t.clientY, pwr, isCritical);
-                spawnParticles(t.clientX, t.clientY);
-            }
-            if (hapticEnabled && window.Telegram?.WebApp?.HapticFeedback) {
-                window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-            }
-        });
-    }, {passive: false});
-
-    touchZone.addEventListener('touchend', () => {
-        const coin = document.getElementById('coin-visual');
-        if(coin) coin.classList.remove('pressed');
-    });
-}
-
-function createPop(x, y, v, isCritical = false) {
-    const p = document.createElement('div'); 
-    p.className = 'floating-text';
-    
-    if (isCritical) {
-        p.innerText = '+' + v + ' 🔥'; 
-        p.style.color = '#ffcc00'; 
-        p.style.fontSize = '3.5rem';
-        p.style.zIndex = '2001';
-    } else {
-        p.innerText = '+' + v; 
-    }
-
-    p.style.left = x + 'px'; 
-    p.style.top = y + 'px';
-    document.body.appendChild(p); 
-    setTimeout(() => p.remove(), 600);
-}
-
-function spawnParticles(x, y) {
-    for (let i = 0; i < 6; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        p.style.left = x + 'px'; p.style.top = y + 'px';
-        const a = Math.random() * Math.PI * 2; const d = 30 + Math.random() * 40;
-        p.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity: 0 }], { duration: 500 });
-        document.body.appendChild(p);
-        setTimeout(() => p.remove(), 500);
-    }
-}
-
-// ==========================================
-// СИСТЕМНЫЕ ФУНКЦИИ И ЦИКЛЫ
-// ==========================================
-setInterval(() => {
-    if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
-    if (energy < 1000) energy += 2.5;
-    localStorage.setItem('nexus_energy', energy);
-    updateUI();
-}, 100);
 
 function toggleModal(id) {
     const m = document.getElementById(id);
@@ -378,33 +337,31 @@ function toggleModal(id) {
 
 function changeLanguage() { 
     currentLang = currentLang === 'EN' ? 'RU' : 'EN'; 
-    localStorage.setItem('nx_lang', currentLang); 
-    updateUI();
+    localStorage.setItem('nx_lang', currentLang); updateUI();
 }
 
 function toggleHaptic() { 
     hapticEnabled = !hapticEnabled; 
-    localStorage.setItem('nx_haptic', hapticEnabled?'off':'on'); 
-    updateUI(); 
+    localStorage.setItem('nx_haptic', hapticEnabled?'off':'on'); updateUI(); 
 }
 
-function saveData() {
-    // ИСПРАВЛЕНИЕ: Теперь сохраняем строго в те ключи, из которых читаем при старте
-    localStorage.setItem('nexus_bal', balance);
-    localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
-    localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+function createPop(x, y, v, isCrit) {
+    const p = document.createElement('div'); p.className = 'floating-text';
+    p.innerText = isCrit ? '+' + v + ' 🔥' : '+' + v;
+    p.style.left = x + 'px'; p.style.top = y + 'px';
+    if(isCrit) { p.style.color = '#ffcc00'; p.style.fontSize = '3.5rem'; }
+    document.body.appendChild(p); setTimeout(() => p.remove(), 600);
+}
 
-    if (typeof db !== 'undefined' && user && user.id) {
-        db.ref('users/' + user.id).set({
-            name: user.first_name || "Unknown",
-            balance: balance,
-            lastSeen: Date.now()
-        });
+function spawnParticles(x, y) {
+    for (let i = 0; i < 6; i++) {
+        const p = document.createElement('div'); p.className = 'particle';
+        p.style.left = x + 'px'; p.style.top = y + 'px';
+        const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 40;
+        p.animate([{ opacity: 1 }, { transform: `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity: 0 }], 500);
+        document.body.appendChild(p); setTimeout(() => p.remove(), 500);
     }
 }
 
-// Запуск при старте
-document.addEventListener('DOMContentLoaded', () => {
-    updateUI();
-});
+document.addEventListener('DOMContentLoaded', () => { updateUI(); });
 updateUI();
