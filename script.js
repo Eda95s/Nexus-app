@@ -351,7 +351,7 @@ function claimDaily() {
 
 function copyRefLink() {
     // ВАЖНО: Замени "YOUR_BOT_USERNAME" на юзернейм своего бота (без @)
-    const botUsername = "YOUR_BOT_USERNAME"; 
+    const botUsername = "https://t.me/nexus_protocol_bot"; 
     const link = `https://t.me/${botUsername}/app?startapp=${user?.id || '0'}`;
     navigator.clipboard.writeText(link).then(() => {
         tg.showPopup({ message: currentLang === 'RU' ? "Ссылка скопирована!" : "Link copied!" });
