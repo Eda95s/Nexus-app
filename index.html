@@ -27,7 +27,6 @@
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
-      // Логика кошелька
       let tonConnectUI;
       document.addEventListener("DOMContentLoaded", () => {
           tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
@@ -43,41 +42,42 @@
           }
       }
 
-      // Функция вызова модалки Доната
       function handleDonate() {
           toggleModal('donate-modal');
       }
 
-      // Копирование и благодарность
       function copyAndThanks() {
           const address = "0x77e596231a14dee635e42c62ce215a2a47ec2c74";
           navigator.clipboard.writeText(address).then(() => {
-              toggleModal('donate-modal'); // Закрываем QR-окно
+              toggleModal('donate-modal');
               
               if (window.Telegram.WebApp.HapticFeedback) {
                   window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
               }
 
+              const msg = (localStorage.getItem('nx_lang') === 'RU') 
+                ? 'Адрес скопирован! Спасибо за поддержку развития Nexus Mining Engine.' 
+                : 'Address copied! Thank you for supporting Nexus Mining Engine development.';
+
               window.Telegram.WebApp.showPopup({
                   title: 'Nexus Protocol',
-                  message: 'Адрес скопирован! Спасибо за поддержку развития Nexus Mining Engine. Твой вклад очень важен!',
-                  buttons: [{id: 'ok', type: 'default', text: 'К МАЙНИНГУ'}]
+                  message: msg,
+                  buttons: [{id: 'ok', type: 'default', text: 'OK'}]
               });
           });
       }
     </script>
     <style>
-        /* Плавающая кнопка доната */
         #floating-donate {
-            position: fixed; bottom: 80px; right: 15px; width: 50px; height: 50px;
+            position: fixed; bottom: 85px; right: 15px; width: 60px; height: 60px;
             background: linear-gradient(135deg, #26a17b 0%, #1d7e61 100%); 
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000;
-            border: 2px solid #fff; cursor: pointer; color: white; font-weight: bold;
-            font-size: 10px;
+            border: 2px solid #fff; cursor: pointer; color: white;
+            text-align: center; line-height: 1;
         }
-        /* Стили для QR модалки */
+        #floating-donate span { font-size: 9px; font-weight: bold; }
         .qr-container { text-align: center; margin: 15px 0; }
         .qr-container img { border: 5px solid white; border-radius: 10px; width: 160px; }
         .address-box { 
@@ -90,7 +90,9 @@
 <body>
     <div id="vignette" class="vignette-effect"></div>
 
-    <div id="floating-donate" onclick="handleDonate()">USDT</div>
+    <div id="floating-donate" onclick="handleDonate()">
+        <span id="floating-donate-text">USDT<br>DONATE</span>
+    </div>
 
     <div class="metal-background">
         <div class="top-controls">
@@ -102,7 +104,7 @@
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
                     <path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path>
-                    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path>
+                    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4-h-4z"></path>
                 </svg>
             </div>
 
@@ -144,53 +146,22 @@
 
         <div id="donate-modal" class="modal-overlay">
             <div class="modal-content">
-                <h2 style="color: #26a17b; font-size: 1.2rem;">DEPOSIT USDT</h2>
+                <h2 id="m-donate-title" style="color: #26a17b; font-size: 1.2rem;">DEPOSIT USDT</h2>
                 <div class="qr-container">
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=0x77e596231a14dee635e42c62ce215a2a47ec2c74" alt="QR">
                 </div>
+                <p id="m-donate-desc" style="font-size: 0.7rem; color: #aaa; margin-bottom: 10px;">SUPPORT PROJECT DEVELOPMENT</p>
                 <p style="font-size: 0.7rem; color: #888;">Network: <span style="color: #fff;">BSC (BEP20)</span></p>
                 <div class="address-box">0x77e596231a14dee635e42c62ce215a2a47ec2c74</div>
-                <button class="nexus-btn-small" style="width: 100%; margin-bottom: 10px;" onclick="copyAndThanks()">COPY ADDRESS</button>
+                <button id="copy-addr-btn" class="nexus-btn-small" style="width: 100%; margin-bottom: 10px;" onclick="copyAndThanks()">COPY ADDRESS</button>
                 <button class="close-btn-nexus" onclick="toggleModal('donate-modal')">CLOSE</button>
             </div>
         </div>
 
-        <div id="rank-modal" class="modal-overlay">
-            <div class="modal-content full-modal">
-                <h2 id="m-rank-title">TOP MINERS</h2>
-                <div class="rank-list" id="rank-list-container"></div>
-                <button class="close-btn-nexus" onclick="toggleModal('rank-modal')">CLOSE</button>
-            </div>
-        </div>
-
-        <div id="market-modal" class="modal-overlay">
-            <div class="modal-content full-modal">
-                <h2 id="m-market-title">MARKET</h2>
-                <div class="item-grid" id="market-grid"></div> <button class="close-btn-nexus" onclick="toggleModal('market-modal')">CLOSE</button>
-            </div>
-        </div>
-
-        <div id="tasks-modal" class="modal-overlay">
-            <div class="modal-content full-modal">
-                <h2 id="m-tasks-title">TASKS</h2>
-                <div class="item-grid" id="tasks-grid"></div> <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">CLOSE</button>
-            </div>
-        </div>
-
-        <div id="settings-modal" class="modal-overlay">
-            <div class="modal-content">
-                <h2 id="m-sys-title">SYSTEM</h2>
-                <div class="setting-row">
-                    <span id="lbl-lang">LANGUAGE</span>
-                    <button class="nexus-btn-small" id="lang-btn" onclick="changeLanguage()">EN</button>
-                </div>
-                <div class="setting-row">
-                    <span id="lbl-haptic">VIBRATION</span>
-                    <button class="nexus-btn-small" id="haptic-btn" onclick="toggleHaptic()">ON</button>
-                </div>
-                <button class="close-btn-nexus" onclick="toggleModal('settings-modal')">CLOSE</button>
-            </div>
-        </div>
+        <div id="rank-modal" class="modal-overlay"><div class="modal-content full-modal"><h2 id="m-rank-title">TOP MINERS</h2><div class="rank-list" id="rank-list-container"></div><button class="close-btn-nexus" onclick="toggleModal('rank-modal')">CLOSE</button></div></div>
+        <div id="market-modal" class="modal-overlay"><div class="modal-content full-modal"><h2 id="m-market-title">MARKET</h2><div class="item-grid" id="market-grid"></div> <button class="close-btn-nexus" onclick="toggleModal('market-modal')">CLOSE</button></div></div>
+        <div id="tasks-modal" class="modal-overlay"><div class="modal-content full-modal"><h2 id="m-tasks-title">TASKS</h2><div class="item-grid" id="tasks-grid"></div> <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">CLOSE</button></div></div>
+        <div id="settings-modal" class="modal-overlay"><div class="modal-content"><h2 id="m-sys-title">SYSTEM</h2><div class="setting-row"><span id="lbl-lang">LANGUAGE</span><button class="nexus-btn-small" id="lang-btn" onclick="changeLanguage()">EN</button></div><div class="setting-row"><span id="lbl-haptic">VIBRATION</span><button class="nexus-btn-small" id="haptic-btn" onclick="toggleHaptic()">ON</button></div><button class="close-btn-nexus" onclick="toggleModal('settings-modal')">CLOSE</button></div></div>
 
         <nav class="nav-bar">
             <div class="nav-item active" id="nav-mining" onclick="location.reload()">
@@ -208,6 +179,6 @@
         </nav>
     </div>
 
-    <script src="script.js?v=99.0"></script>
+    <script src="script.js?v=100.0"></script>
 </body>
 </html>
