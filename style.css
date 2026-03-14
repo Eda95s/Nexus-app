@@ -8,33 +8,74 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 @keyframes pulseRed { 50% { box-shadow: inset 0 0 200px rgba(255, 0, 0, 1); } }
 
 .metal-background { width: 100%; height: 100vh; background: radial-gradient(circle at center, #0a162f 0%, #000 100%); display: flex; flex-direction: column; align-items: center; }
-
-/* Кнопки управления */
+/* Кнопки управления — ТЕПЕРЬ ОНИ РАСКИДАНЫ ПО СТОРОНАМ */
 .top-controls { 
     position: absolute; 
-    top: 20px; /* Мы подняли их здесь, чтобы не мешали балансу */
+    top: 25px; 
     left: 0;
     right: 0;
     display: flex;
-    justify-content: space-between;
+    justify-content: space-between; /* Левая и правая кнопки уходят к краям */
     padding: 0 20px;
     width: 100%;
     box-sizing: border-box;
     z-index: 100;
 }
 
-/* Твоя 25-я строчка, которую нельзя терять: */
+/* Фиксируем кнопку кошелька строго по центру (она вторая в HTML) */
+.top-controls .control-btn:nth-child(2) {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.control-btn {
+    width: 44px;
+    height: 44px;
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid var(--cyan);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cyan);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+/* Твоя 25-я строчка (сохранена): */
 .control-btn:active { transform: scale(0.9); opacity: 0.8; }
 
+/* Кнопка USDT */
+#floating-donate {
+    position: fixed;
+    bottom: 95px; 
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #26a17b 0%, #1d7e61 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 15px rgba(38, 161, 123, 0.5);
+    z-index: 999;
+    border: 2px solid white;
+    cursor: pointer;
+    color: white;
+    font-weight: 900;
+    font-size: 10px;
+}
 
-/* Верхняя инфо-панель */
-.header-section { margin-top: 70px; text-align: center; }
+/* Верхняя инфо-панель (баланс) — опускаем ниже, чтобы кнопки не мешали */
+.header-section { margin-top: 100px; text-align: center; }
+
 #balance-value { font-size: 3.8rem; font-weight: 900; text-shadow: 0 0 25px var(--cyan); letter-spacing: -2px; }
 .rank-label { 
     color: var(--gold); 
     border: 1px solid var(--gold); 
     display: inline-block; 
-    min-width: 120px; /* Даст запас места, чтобы рамка не дергалась */
+    min-width: 120px; 
     text-align: center;
 }
 
