@@ -1,5 +1,4 @@
-        
-const tg = window.Telegram.WebApp;
+      const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user;
 // 1. Инициализация самого объекта (проверь, есть ли это у тебя)
