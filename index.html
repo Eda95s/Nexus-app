@@ -158,7 +158,13 @@
             </div>
         </div>
 
-        <div id="rank-modal" class="modal-overlay"><div class="modal-content full-modal"><h2 id="m-rank-title">TOP MINERS</h2><div class="rank-list" id="rank-list-container"></div><button class="close-btn-nexus" onclick="toggleModal('rank-modal')">CLOSE</button></div></div>
+        <div id="rank-modal" class="modal-overlay">
+            <div class="modal-content full-modal">
+                <h2 id="m-rank-title">TOP MINERS</h2>
+                <div class="rank-list" id="leaderboard-list"></div>
+                <button class="close-btn-nexus" onclick="toggleModal('rank-modal')">CLOSE</button>
+            </div>
+        </div>
         <div id="market-modal" class="modal-overlay"><div class="modal-content full-modal"><h2 id="m-market-title">MARKET</h2><div class="item-grid" id="market-grid"></div> <button class="close-btn-nexus" onclick="toggleModal('market-modal')">CLOSE</button></div></div>
         <div id="tasks-modal" class="modal-overlay"><div class="modal-content full-modal"><h2 id="m-tasks-title">TASKS</h2><div class="item-grid" id="tasks-grid"></div> <button class="close-btn-nexus" onclick="toggleModal('tasks-modal')">CLOSE</button></div></div>
         <div id="settings-modal" class="modal-overlay"><div class="modal-content"><h2 id="m-sys-title">SYSTEM</h2><div class="setting-row"><span id="lbl-lang">LANGUAGE</span><button class="nexus-btn-small" id="lang-btn" onclick="changeLanguage()">EN</button></div><div class="setting-row"><span id="lbl-haptic">VIBRATION</span><button class="nexus-btn-small" id="haptic-btn" onclick="toggleHaptic()">ON</button></div><button class="close-btn-nexus" onclick="toggleModal('settings-modal')">CLOSE</button></div></div>
