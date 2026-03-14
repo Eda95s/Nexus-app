@@ -1,4 +1,4 @@
- const tg = window.Telegram.WebApp;
+const tg = window.Telegram.WebApp;
 tg.expand();
 const user = tg.initDataUnsafe?.user;
 
@@ -100,7 +100,8 @@ const langMap = {
         buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
         task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
         donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
-        daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "COPY LINK", wait: "WAIT"
+        daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "COPY LINK", wait: "WAIT",
+        go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!"
     },
     RU: {
         mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
@@ -108,7 +109,8 @@ const langMap = {
         buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
         task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
         donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
-        daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "КОПИРОВАТЬ ССЫЛКУ", wait: "ОЖИДАНИЕ"
+        daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "КОПИРОВАТЬ ССЫЛКУ", wait: "ОЖИДАНИЕ",
+        go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!"
     }
 };
 
@@ -291,13 +293,19 @@ setInterval(() => {
     updateUI();
 }, 100);
 
-// --- ОБНОВЛЕННЫЙ БЛОК ЗАДАЧ ---
+// ==========================================
+// БЛОК ЗАДАЧ С ПРОВЕРКОЙ (ANTI-CHEAT)
+// ==========================================
+
+// ВАЖНО: Замени на свои данные
+const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o"; // Токен твоего бота
+const CHANNEL_ID = "-1002086386401"; // ID твоего канала (начинается с -100)
+
 function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
     if (!grid) return;
 
-    // Расчет ежедневного бонуса
     const now = Date.now();
     const canClaimDaily = (now - lastDailyClaim) > 86400000;
     const dailyReward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
@@ -322,20 +330,31 @@ function renderTasks() {
     `;
 
     const tasks = [
-        { id: 'sub1', title: L.task1, reward: 5000 },
-        { id: 'invite', title: L.task2, reward: 15000 },
-        { id: 'reach100k', title: L.task3, reward: 25000 }
+        { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_mining_hub' },
+        { id: 'invite', title: L.task2, reward: 15000, url: '' },
+        { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
     ];
+
     tasks.forEach(task => {
         const isDone = tasksDone.includes(task.id);
         grid.innerHTML += `<div class="card-nexus">
-            <div class="card-info"><span class="card-title">${task.title}</span><span class="card-sub">+${task.reward.toLocaleString()} N</span></div>
-            <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} onclick="completeTask('${task.id}', ${task.reward})">${isDone ? L.claimed : L.claim}</button>
+            <div class="card-info">
+                <span class="card-title">${task.title}</span>
+                <span class="card-sub">+${task.reward.toLocaleString()} N</span>
+            </div>
+            <div style="display:flex; gap:5px;">
+                ${isDone ? 
+                    `<button class="nexus-btn-buy" disabled>${L.claimed}</button>` : 
+                    `
+                    <button class="nexus-btn-buy" onclick="completeTask('${task.id}', ${task.reward}, '${task.url}')">${L.go}</button>
+                    <button class="nexus-btn-buy" style="background:#26a17b" id="check-${task.id}" onclick="verifyTask('${task.id}', ${task.reward})">${L.check}</button>
+                    `
+                }
+            </div>
         </div>`;
     });
 }
 
-// --- НОВЫЕ ФУНКЦИИ ДЛЯ КНОПОК ЗАДАЧ ---
 function claimDaily() {
     const now = Date.now();
     if (now - lastDailyClaim < 86400000) return;
@@ -350,16 +369,64 @@ function claimDaily() {
 }
 
 function copyRefLink() {
-    // ВАЖНО: Замени "YOUR_BOT_USERNAME" на юзернейм своего бота (без @)
-    const botUsername = "https://t.me/nexus_protocol_bot"; 
+    const botUsername = "nexus_protocol_bot"; 
     const link = `https://t.me/${botUsername}/app?startapp=${user?.id || '0'}`;
     navigator.clipboard.writeText(link).then(() => {
         tg.showPopup({ message: currentLang === 'RU' ? "Ссылка скопирована!" : "Link copied!" });
     });
 }
 
-function completeTask(id, reward) {
+let taskTimers = {}; 
+
+function completeTask(id, reward, url) {
     if (!tasksDone.includes(id)) {
+        if (url && url !== '') window.open(url, '_blank');
+        taskTimers[id] = Date.now();
+        tg.showAlert(currentLang === 'RU' ? "Задание начато! Подождите 15 секунд, затем нажмите ПРОВЕРИТЬ." : "Task started! Wait 15 seconds, then click CHECK.");
+    }
+}
+
+// УЛЬТИМАТИВНАЯ ПРОВЕРКА ЧЕРЕЗ BOT API
+async function verifyTask(id, reward) {
+    const L = langMap[currentLang];
+    const now = Date.now();
+    const startTime = taskTimers[id];
+    const checkBtn = document.getElementById(`check-${id}`);
+
+    if (!startTime) {
+        tg.showAlert(L.go + " first!");
+        return;
+    }
+
+    if (now - startTime < 15000) {
+        const timeLeft = Math.ceil((15000 - (now - startTime)) / 1000);
+        tg.showAlert(`${L.wait}: ${timeLeft}s`);
+        return;
+    }
+
+    // Блокируем кнопку на время запроса
+    if(checkBtn) { checkBtn.disabled = true; checkBtn.innerText = L.checking; }
+
+    try {
+        // Запрос к Telegram API для проверки подписки
+        const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${CHANNEL_ID}&user_id=${user.id}`);
+        const data = await response.json();
+
+        if (data.ok && (data.result.status === 'member' || data.result.status === 'administrator' || data.result.status === 'creator')) {
+            if (!tasksDone.includes(id)) {
+                Core.modifyBalance(reward);
+                tasksDone.push(id);
+                localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+                tg.showAlert(`+${reward} N!`);
+                updateUI();
+            }
+        } else {
+            tg.showAlert(L.notSub);
+            if(checkBtn) { checkBtn.disabled = false; checkBtn.innerText = L.check; }
+        }
+    } catch (e) {
+        console.error("Verification error:", e);
+        // Если API упало, даем бонус просто по времени (запасной вариант)
         Core.modifyBalance(reward);
         tasksDone.push(id);
         localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
@@ -518,6 +585,6 @@ function updateRank() {
 
 document.addEventListener('DOMContentLoaded', () => { 
     if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
-    checkReferral(); // <--- Проверка реферала на старте
+    checkReferral(); 
     updateUI(); 
-}); 
+});
