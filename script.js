@@ -61,6 +61,11 @@ let isOverdrive = false;
 let currentLang = localStorage.getItem('nx_lang') || 'EN';
 let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
 
+// --- НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ БОНУСОВ ---
+let lastDailyClaim = parseInt(localStorage.getItem('nexus_daily')) || 0;
+let dailyStreak = parseInt(localStorage.getItem('nexus_streak')) || 0;
+let refClaimed = localStorage.getItem('nexus_ref_claimed') === 'true';
+
 // ==========================================
 // CORE (ЯДРО ИГРОВОЙ ЛОГИКИ)
 // ==========================================
@@ -94,14 +99,16 @@ const langMap = {
         sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "CHARGE", ready: "READY!",
         buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
         task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
-        donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS"
+        donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
+        daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "COPY LINK", wait: "WAIT"
     },
     RU: {
         mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
         sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАРЯД", ready: "ГОТОВО!",
         buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
         task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
-        donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС"
+        donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
+        daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "КОПИРОВАТЬ ССЫЛКУ", wait: "ОЖИДАНИЕ"
     }
 };
 
@@ -284,16 +291,41 @@ setInterval(() => {
     updateUI();
 }, 100);
 
+// --- ОБНОВЛЕННЫЙ БЛОК ЗАДАЧ ---
 function renderTasks() {
     const L = langMap[currentLang];
     const grid = document.getElementById('tasks-grid');
     if (!grid) return;
+
+    // Расчет ежедневного бонуса
+    const now = Date.now();
+    const canClaimDaily = (now - lastDailyClaim) > 86400000;
+    const dailyReward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
+
+    grid.innerHTML = `
+        <div class="card-nexus" style="border-color: #ffcc00; box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);">
+            <div class="card-info">
+                <span class="card-title">${L.daily} (Day ${dailyStreak + 1})</span>
+                <span class="card-sub">+${dailyReward.toLocaleString()} N</span>
+            </div>
+            <button class="nexus-btn-buy" ${!canClaimDaily ? 'disabled' : ''} onclick="claimDaily()">
+                ${canClaimDaily ? L.claim : L.wait}
+            </button>
+        </div>
+        <div class="card-nexus" style="border-color: #00d4ff; background: rgba(0, 212, 255, 0.05);">
+            <div class="card-info">
+                <span class="card-title">${L.refTask}</span>
+                <span class="card-sub">+50,000 N EACH</span>
+            </div>
+            <button class="nexus-btn-buy" onclick="copyRefLink()">${L.refCopy}</button>
+        </div>
+    `;
+
     const tasks = [
         { id: 'sub1', title: L.task1, reward: 5000 },
         { id: 'invite', title: L.task2, reward: 15000 },
         { id: 'reach100k', title: L.task3, reward: 25000 }
     ];
-    grid.innerHTML = "";
     tasks.forEach(task => {
         const isDone = tasksDone.includes(task.id);
         grid.innerHTML += `<div class="card-nexus">
@@ -301,6 +333,51 @@ function renderTasks() {
             <button class="nexus-btn-buy" ${isDone ? 'disabled' : ''} onclick="completeTask('${task.id}', ${task.reward})">${isDone ? L.claimed : L.claim}</button>
         </div>`;
     });
+}
+
+// --- НОВЫЕ ФУНКЦИИ ДЛЯ КНОПОК ЗАДАЧ ---
+function claimDaily() {
+    const now = Date.now();
+    if (now - lastDailyClaim < 86400000) return;
+    const reward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
+    Core.modifyBalance(reward);
+    lastDailyClaim = now;
+    dailyStreak++;
+    localStorage.setItem('nexus_daily', lastDailyClaim);
+    localStorage.setItem('nexus_streak', dailyStreak);
+    tg.showAlert(`+${reward} N!`);
+    updateUI();
+}
+
+function copyRefLink() {
+    // ВАЖНО: Замени "YOUR_BOT_USERNAME" на юзернейм своего бота (без @)
+    const botUsername = "YOUR_BOT_USERNAME"; 
+    const link = `https://t.me/${botUsername}/app?startapp=${user?.id || '0'}`;
+    navigator.clipboard.writeText(link).then(() => {
+        tg.showPopup({ message: currentLang === 'RU' ? "Ссылка скопирована!" : "Link copied!" });
+    });
+}
+
+function completeTask(id, reward) {
+    if (!tasksDone.includes(id)) {
+        Core.modifyBalance(reward);
+        tasksDone.push(id);
+        localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+        updateUI();
+    }
+}
+
+function checkReferral() {
+    const startParam = tg.initDataUnsafe?.start_param;
+    if (startParam && !refClaimed) {
+        Core.modifyBalance(50000);
+        refClaimed = true;
+        localStorage.setItem('nexus_ref_claimed', 'true');
+        tg.showAlert(currentLang === 'RU' ? "Бонус за приглашение: +50,000 N!" : "Referral Bonus: +50,000 N!");
+        if (typeof db !== 'undefined') {
+            db.ref('users/' + startParam + '/ref_bonus_pending').set(firebase.database.ServerValue.increment(50000));
+        }
+    }
 }
 
 function buyItem(type) {
@@ -441,5 +518,6 @@ function updateRank() {
 
 document.addEventListener('DOMContentLoaded', () => { 
     if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
+    checkReferral(); // <--- Проверка реферала на старте
     updateUI(); 
-});
+}); 
