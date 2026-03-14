@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -6,76 +6,84 @@
     <title>Nexus Mining Engine</title>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 
+    <style>
+        /* Вынес стили сюда, чтобы код был чистым */
+        body { margin: 0; padding: 0; background: #000; color: #fff; font-family: sans-serif; }
+        #floating-donate {
+            position: fixed; bottom: 80px; right: 15px; width: 50px; height: 50px; 
+            background: rgba(38, 161, 123, 0.9); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            z-index: 1000; border: 2px solid #fff; cursor: pointer;
+        }
+        .control-btn { width: 40px; height: 40px; background: #333; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; }
+        .top-controls { display: flex; gap: 10px; padding: 15px; }
+    </style>
+
     <script>
-        // Инициализация Telegram
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Инициализация Firebase (ВСТАВЬ СВОИ ПОЛНЫЕ КЛЮЧИ ИЗ ПРЕДЫДУЩЕГО СКРИНШОТА)
+        // Твой конфиг Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyBXwMF9uRZWzXh3_1fPxY2SNsJCMmLhMFw", 
+            apiKey: "AIzaSyBXwMF9uRZWzXh3_1fPxY2SNsJCmMLhMFY",
             authDomain: "nexus-app-6769e.firebaseapp.com",
             databaseURL: "https://nexus-app-6769e-default-rtdb.firebaseio.com",
             projectId: "nexus-app-6769e",
             storageBucket: "nexus-app-6769e.appspot.com",
             messagingSenderId: "104884767189",
-            appId: "1:104884767189:web:..." 
+            appId: "1:104884767189:web:5f171fdb3ff5a67890" // Убедись, что тут полный ID
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Инициализация TonConnect (ОБРАТИ ВНИМАНИЕ: убрали buttonRootId!)
+        // Настройка TonConnect (БЕЗ buttonRootId!)
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://eda95s.github.io/Nexus-app/tonconnect-manifest.json'
         });
 
-        // Функция вызова кошелька для твоей кастомной кнопки
         async function connectWallet() {
             try {
-                // Прямой вызов открытия окна
                 await tonConnectUI.openModal();
             } catch (error) {
-                console.error("Ошибка при открытии модалки:", error);
+                console.error("Ошибка кошелька:", error);
             }
         }
 
-        // Обработка успешного подключения (начисление награды)
         tonConnectUI.onStatusChange(wallet => {
             if (wallet) {
-                tg.showAlert("✅ Кошелек привязан! +100,000 N");
-                // Здесь будет твоя логика начисления баланса (NexusShield.execute и т.д.)
+                tg.showAlert("✅ Кошелек привязан!");
             }
         });
 
-        // Функция для кнопки доната (USDT)
         function showDonation() {
-            tg.openLink("https://t.me/tвой_канал_или_ссылка");
+            tg.openLink("https://t.me/tвой_канал");
         }
     </script>
 </head>
 <body>
 
-    <div id="floating-donate" onclick="showDonation()" style="position: fixed; bottom: 80px; right: 15px; width: 50px; height: 50px; background: rgba(38, 161, 123, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000; border: 2px solid #fff; cursor: pointer;">
-        <span style="color: white; font-weight: bold;">USDT</span>
+    <div id="floating-donate" onclick="showDonation()">
+        <span style="font-weight: bold; font-size: 12px;">USDT</span>
     </div>
-
-    <div id="vignette" class="vignette-effect"></div>
 
     <div class="metal-background">
         <div class="top-controls">
-            
             <div class="control-btn" onclick="connectWallet()">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M19 7H5C3.89 7 3 7.89 3 9V17C3 18.11 3.89 19 5 19H19C20.11 19 21 18.11 21 17V9C21 7.89 20.11 7 19 7ZM16 14C15.45 14 15 13.55 15 13C15 12.45 15.45 12 16 12C16.55 12 17 12.45 17 13C17 13.55 16.55 14 16 14ZM19 5H5C3.89 5 3 5.89 3 7H21C21 5.89 20.11 5 19 5Z"></path>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="16" rx="2"/>
+                    <path d="M16 12h4"/>
                 </svg>
             </div>
-            
-            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 50px;">
+            <h1>Nexus Engine</h1>
+            <p>Система загружена</p>
+        </div>
     </div>
 
 </body>
