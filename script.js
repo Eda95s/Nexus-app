@@ -306,34 +306,66 @@
             <div class="card-nexus" style="border-color: #00d4ff;">
                 <div class="card-info">
                     <span class="card-title">${L.refTask}</span>
-                    <span class="card-sub">+50,000 N EACH</span>
-                </div>
+                    <span class="card-sub">+5,000 N EACH</span> </div>
                 <button class="nexus-btn-buy" onclick="copyRefLink()">${L.refCopy}</button>
             </div>
         `;
 
         const tasks = [
             { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_protocol' },
-            { id: 'invite', title: L.task2, reward: 15000, url: '' },
+            { id: 'invite', title: L.task2, reward: 15000, url: 'auto' }, // Задание 5 друзей
             { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
         ];
 
         tasks.forEach(task => {
             const isDone = tasksDone.includes(task.id);
+            let actionButtons = '';
+
+            if (isDone) {
+                actionButtons = `<button class="nexus-btn-buy" disabled>${L.claimed}</button>`;
+            } else if (task.id === 'invite') {
+                // Автоматическая кнопка для 5 друзей
+                actionButtons = `<button class="nexus-btn-buy" onclick="startAutoInviteTask()">${L.refCopy}</button>`;
+            } else {
+                actionButtons = `
+                    <button class="nexus-btn-buy" onclick="completeTask('${task.id}', ${task.reward}, '${task.url}')">${L.go}</button>
+                    <button class="nexus-btn-buy" style="background:#26a17b" id="check-${task.id}" onclick="verifyTask('${task.id}', ${task.reward})">${L.check}</button>
+                `;
+            }
+
             grid.innerHTML += `<div class="card-nexus">
                 <div class="card-info">
                     <span class="card-title">${task.title}</span>
                     <span class="card-sub">+${task.reward.toLocaleString()} N</span>
                 </div>
                 <div style="display:flex; gap:5px;">
-                    ${isDone ? `<button class="nexus-btn-buy" disabled>${L.claimed}</button>` : 
-                        `<button class="nexus-btn-buy" onclick="completeTask('${task.id}', ${task.reward}, '${task.url}')">${L.go}</button>
-                        <button class="nexus-btn-buy" style="background:#26a17b" id="check-${task.id}" onclick="verifyTask('${task.id}', ${task.reward})">${L.check}</button>`
-                    }
+                    ${actionButtons}
                 </div>
             </div>`;
         });
     }
+
+    // Авто-проверка на 5 друзей в фоне
+    window.startAutoInviteTask = function() {
+        copyRefLink();
+        tg.showAlert(currentLang === 'RU' ? "Отправлено! Система в фоне проверит 5 друзей и выдаст награду." : "Sent! System will check for 5 friends in background.");
+        
+        if (typeof db !== 'undefined' && user?.id) {
+            const checkRef = setInterval(() => {
+                if (tasksDone.includes('invite')) {
+                    clearInterval(checkRef);
+                    return;
+                }
+                db.ref('users/' + user.id + '/referrals_count').once('value', (snap) => {
+                    const count = snap.val() || 0;
+                    if (count >= 5) {
+                        grantReward('invite', 15000);
+                        clearInterval(checkRef);
+                    }
+                });
+            }, 5000); // Опрос каждые 5 сек
+        }
+    };
 
     window.verifyTask = async function(id, reward) {
         const L = langMap[currentLang];
@@ -494,9 +526,26 @@
     };
 
     function updateRank() {
+        let rankIndex = 0;
         let rank = RANKS[0].name;
-        for (let i = RANKS.length-1; i>=0; i--) { if(balance >= RANKS[i].limit) { rank = RANKS[i].name; break; } }
-        const rb = document.getElementById('rank-badge'); if(rb) rb.innerText = `RANK: ${rank}`;
+        for (let i = RANKS.length-1; i>=0; i--) { 
+            if(balance >= RANKS[i].limit) { 
+                rank = RANKS[i].name; 
+                rankIndex = i;
+                break; 
+            } 
+        }
+        const rb = document.getElementById('rank-badge'); 
+        if(rb) rb.innerText = `RANK: ${rank}`;
+
+        // Обновляем визуал монеты в зависимости от ранга
+        const coin = document.getElementById('coin-visual');
+        if (coin) {
+            const isPressed = coin.classList.contains('pressed');
+            coin.className = 'nexus-button'; // сбрасываем старые
+            coin.classList.add(`rank-${rankIndex}`); // ставим новый эффект ранга
+            if (isPressed) coin.classList.add('pressed');
+        }
     }
 
     // ==========================================
@@ -518,12 +567,12 @@
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
         
-        // Реферальный бонус
+        // Реферальный бонус (тоже сократил на один 0 до 5,000)
         const sp = tg.initDataUnsafe?.start_param;
         if (sp && !refClaimed) {
-            balance += 50000; refClaimed = true;
+            balance += 5000; refClaimed = true;
             localStorage.setItem('nexus_ref_claimed', 'true');
-            tg.showAlert("+50,000 N!");
+            tg.showAlert("+5,000 N!");
         }
 
         Core.applyPassive(); // Считаем оффлайн доход
