@@ -8,21 +8,21 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 @keyframes pulseRed { 50% { box-shadow: inset 0 0 200px rgba(255, 0, 0, 1); } }
 
 .metal-background { width: 100%; height: 100vh; background: radial-gradient(circle at center, #0a162f 0%, #000 100%); display: flex; flex-direction: column; align-items: center; }
-/* Кнопки управления — ТЕПЕРЬ ОНИ РАСКИДАНЫ ПО СТОРОНАМ */
+
+/* Кнопки управления */
 .top-controls { 
     position: absolute; 
     top: 25px; 
     left: 0;
     right: 0;
     display: flex;
-    justify-content: space-between; /* Левая и правая кнопки уходят к краям */
+    justify-content: space-between; 
     padding: 0 20px;
     width: 100%;
     box-sizing: border-box;
     z-index: 100;
 }
 
-/* Фиксируем кнопку кошелька строго по центру (она вторая в HTML) */
 .top-controls .control-btn:nth-child(2) {
     position: absolute;
     left: 50%;
@@ -43,10 +43,8 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
     transition: 0.2s;
 }
 
-/* Твоя 25-я строчка (сохранена): */
 .control-btn:active { transform: scale(0.9); opacity: 0.8; }
 
-/* Кнопка USDT */
 #floating-donate {
     position: fixed;
     bottom: 95px; 
@@ -67,7 +65,6 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
     font-size: 10px;
 }
 
-/* Верхняя инфо-панель (баланс) — опускаем ниже, чтобы кнопки не мешали */
 .header-section { margin-top: 100px; text-align: center; }
 
 #balance-value { font-size: 3.8rem; font-weight: 900; text-shadow: 0 0 25px var(--cyan); letter-spacing: -2px; }
@@ -79,16 +76,77 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
     text-align: center;
 }
 
-/* Кнопка майнинга */
+/* ==================================================== */
+/* ДИНАМИЧЕСКАЯ КНОПКА МАЙНИНГА (ВИЗУАЛ РАНГОВ)         */
+/* ==================================================== */
 .nexus-button { 
-    width: 250px; height: 250px; border-radius: 50%; background: radial-gradient(circle, #1a2a4a 0%, #050a14 100%);
-    border: 6px solid #1a2a4a; display: flex; align-items: center; justify-content: center;
-    transition: 0.05s; box-shadow: 0 0 50px rgba(0,0,0,0.9);
+    width: 250px; height: 250px; border-radius: 50%; 
+    background: radial-gradient(circle, var(--bg-inner, #1a2a4a) 0%, var(--bg-outer, #050a14) 100%);
+    border: 6px solid var(--btn-border, #1a2a4a); 
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.5s, border-color 0.5s, box-shadow 0.5s;
+    box-shadow: 0 0 50px rgba(0,0,0,0.9);
+    animation: coreBreath 4s ease-in-out infinite;
+
+    /* Дефолтные переменные (Rookie) */
+    --btn-glow: rgba(0, 212, 255, 0.2);
+    --btn-glow-active: rgba(0, 212, 255, 0.4);
+    --btn-border: #1a2a4a;
+    --btn-border-active: var(--cyan);
+    --bg-inner: #1a2a4a;
+    --bg-outer: #050a14;
+    --sym-color: #fff;
+    --sym-glow: var(--cyan);
 }
-.nexus-symbol { font-size: 110px; font-weight: 900; color: #fff; text-shadow: 0 0 25px var(--cyan); }
+
+.nexus-symbol { 
+    font-size: 110px; font-weight: 900; 
+    color: var(--sym-color, #fff); 
+    text-shadow: 0 0 25px var(--sym-glow, var(--cyan)); 
+    transition: 0.5s; 
+}
+
 .pressed { transform: scale(0.94); filter: brightness(1.4); }
 
-/* Нижние шкалы */
+/* ЭФФЕКТЫ РАНГОВ */
+.rank-0 { /* ROOKIE */
+    --btn-glow: rgba(0, 212, 255, 0.2); --btn-glow-active: rgba(0, 212, 255, 0.4); 
+    --btn-border: #1a2a4a; --btn-border-active: var(--cyan); 
+    --bg-inner: #1a2a4a; --bg-outer: #050a14; --sym-color: #fff; --sym-glow: var(--cyan); 
+}
+.rank-1 { /* MINER */
+    --btn-glow: rgba(38, 161, 123, 0.2); --btn-glow-active: rgba(38, 161, 123, 0.5); 
+    --btn-border: #1a4a38; --btn-border-active: #26a17b; 
+    --bg-inner: #1a4a38; --bg-outer: #05140d; --sym-color: #e0fff4; --sym-glow: #26a17b; 
+}
+.rank-2 { /* PRO MINER */
+    --btn-glow: rgba(176, 38, 161, 0.2); --btn-glow-active: rgba(176, 38, 161, 0.5); 
+    --btn-border: #4a1a4a; --btn-border-active: #b026a1; 
+    --bg-inner: #4a1a4a; --bg-outer: #140514; --sym-color: #ffe0ff; --sym-glow: #b026a1; 
+}
+.rank-3 { /* CYBER MINER */
+    --btn-glow: rgba(255, 204, 0, 0.2); --btn-glow-active: rgba(255, 204, 0, 0.6); 
+    --btn-border: #4a3a1a; --btn-border-active: var(--gold); 
+    --bg-inner: #4a3a1a; --bg-outer: #140e05; --sym-color: #fffde0; --sym-glow: var(--gold); 
+}
+.rank-4 { /* NEXUS WHALE */
+    --btn-glow: rgba(255, 0, 60, 0.2); --btn-glow-active: rgba(255, 0, 60, 0.7); 
+    --btn-border: #4a1a1a; --btn-border-active: var(--red); 
+    --bg-inner: #4a1a1a; --bg-outer: #140505; --sym-color: #ffe0e0; --sym-glow: var(--red); 
+}
+.rank-5 { /* LEGEND */
+    --btn-glow: rgba(255, 255, 255, 0.4); --btn-glow-active: rgba(255, 255, 255, 0.9); 
+    --btn-border: #555; --btn-border-active: #fff; 
+    --bg-inner: #ffffff; --bg-outer: #444444; --sym-color: #000; --sym-glow: #fff; 
+}
+
+@keyframes coreBreath {
+    0%, 100% { box-shadow: 0 0 40px var(--btn-glow); border-color: var(--btn-border); }
+    50% { box-shadow: 0 0 70px var(--btn-glow-active); border-color: var(--btn-border-active); }
+}
+
+/* ==================================================== */
+
 .bottom-ui { position: absolute; bottom: 100px; width: 85%; }
 .label-with-icon { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: var(--cyan); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
 .bar-bg { width: 100%; height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 15px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
@@ -102,7 +160,7 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 .sync-btn.ready { border-color: var(--cyan); color: #fff; box-shadow: 0 0 20px var(--cyan); }
 .sync-btn.active { background: var(--red); color: #fff; border-color: #fff; box-shadow: 0 0 30px var(--red); }
 
-/* МОДАЛЬНЫЕ ОКНА (UI КИТ) */
+/* МОДАЛЬНЫЕ ОКНА */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(15px); }
 .modal-content { background: #050a14; border: 1px solid var(--cyan); border-left: 6px solid var(--cyan); padding: 25px; border-radius: 20px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; }
 .full-modal { height: 80vh; }
@@ -126,7 +184,6 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 
 .close-btn-nexus { background: none; border: 1px solid #555; color: #555; padding: 12px; border-radius: 12px; margin-top: 20px; font-family: 'Orbitron'; font-weight: 900; font-size: 0.8rem; }
 
-/* Ранги */
 .rank-item { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 12px; margin-bottom: 8px; border-right: 4px solid transparent; }
 .active-rank { border-right-color: var(--cyan); background: rgba(0, 212, 255, 0.05); }
 
@@ -141,10 +198,7 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 .particle { position: absolute; width: 4px; height: 4px; background: var(--cyan); border-radius: 1px; pointer-events: none; z-index: 998; }
 @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-100px); } }
 
-/* Добавлено для подсветки активного буста в маркете */
 .boost-active { border-color: var(--gold) !important; box-shadow: 0 0 10px var(--gold); }
-
-/* === ДОПОЛНЕНИЯ ДЛЯ NEXUS ENGINE === */
 
 /* Фоновая сетка для глубины */
 body::before {
@@ -159,17 +213,6 @@ body::before {
     z-index: -1;
 }
 
-/* Пульсация центрального ядра */
-.nexus-button {
-    animation: coreBreath 4s ease-in-out infinite;
-}
-
-@keyframes coreBreath {
-    0%, 100% { box-shadow: 0 0 40px rgba(0, 212, 255, 0.2); border-color: #1a2a4a; }
-    50% { box-shadow: 0 0 70px rgba(0, 212, 255, 0.4); border-color: var(--cyan); }
-}
-
-/* Эффект сканирующей линии (опционально добавить в HTML: <div class="scanline"></div>) */
 .scanline {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -178,4 +221,4 @@ body::before {
     z-index: 1000;
     pointer-events: none;
     opacity: 0.5;
-}
+                 }
