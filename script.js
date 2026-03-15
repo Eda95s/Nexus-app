@@ -130,7 +130,7 @@
     };
 
     const RANKS = [
-        { name: "ROOKIE", limit: 0 }, { name: "MINER", limit: 10000 }, { name: "PRO MINER", limit: 50000 },
+        { name: "ROOKIE", limit: 0 }, { name: "MINER", limit: 1000 }, { name: "PRO MINER", limit: 50000 },
         { name: "CYBER MINER", limit: 250000 }, { name: "NEXUS WHALE", limit: 1000000 }, { name: "LEGEND", limit: 5000000 }
     ];
 
