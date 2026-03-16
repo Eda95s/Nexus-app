@@ -90,29 +90,30 @@
 
     function initChatSync() {
     if(typeof db === 'undefined') return;
-    
-    db.ref('chat').limitToLast(30).on('value', (snap) => {
+    db.ref('chat').limitToLast(20).on('value', (snap) => {
         const container = document.getElementById('chat-messages');
         if(!container) return;
-        
-        container.innerHTML = '';
+
+        container.innerHTML = ''; // Очищаем один раз
         snap.forEach(child => {
             const m = child.val();
+            // Используем обычный div без лишних оберток
             container.innerHTML += `
-                <div class="chat-msg">
-                    <span class="author">${m.name.toUpperCase()}</span>
-                    <span class="text">${m.text}</span>
+                <div class="chat-msg" style="margin-bottom: 8px; padding: 5px; border-left: 2px solid var(--cyan);">
+                    <div style="color: var(--yellow); font-size: 10px; font-weight: bold;">${m.name}</div>
+                    <div style="color: white; font-size: 13px;">${m.text}</div>
                 </div>
             `;
         });
-
-        // АВТО-ПРОКРУТКА ВНИЗ
+        
+        // Эта строка прокручивает в самый низ при получении сообщения
         container.scrollTo({
             top: container.scrollHeight,
             behavior: 'smooth'
         });
     });
 }
+
 
     // ==========================================
     // СИСТЕМЫ ЗАЩИТЫ
