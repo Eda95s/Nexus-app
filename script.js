@@ -1,4 +1,3 @@
-// ВАЖНО: Поставь это в самом начале script.js, до всех initChatSync и прочего
 window.deleteMsg = function(msgId) {
     if (!msgId) return;
 
