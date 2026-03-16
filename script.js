@@ -112,6 +112,8 @@
 
       function initChatSync() {
         if(typeof db === 'undefined') return;
+        const ADMIN_ID = 5240434059; // !!! ЗАМЕНИ ЭТО ЧИСЛО НА СВОЙ ID ИЗ БОТА !!!
+
         db.ref('chat').limitToLast(20).on('value', (snap) => {
             const container = document.getElementById('chat-messages');
             if(!container) return;
@@ -119,8 +121,8 @@
             
             snap.forEach(child => {
                 const m = child.val();
+                const msgId = child.key; // Уникальный ID сообщения в базе
                 
-                // Находим название ранга по лимиту баллов (используем твой массив RANKS)
                 let userRank = RANKS[0].name;
                 for (let i = RANKS.length - 1; i >= 0; i--) {
                     if ((m.balance || 0) >= RANKS[i].limit) {
@@ -129,13 +131,20 @@
                     }
                 }
 
+                // Проверяем, админ ли текущий пользователь
+                const isAdmin = (user?.id === ADMIN_ID);
+                const deleteBtn = isAdmin ? `<span onclick="deleteMsg('${msgId}')" style="color: #ff4444; cursor: pointer; font-size: 10px; margin-left: 10px;">[УДАЛИТЬ]</span>` : '';
+
                 container.innerHTML += `
                     <div class="chat-msg" style="margin-bottom: 10px; border-left: 2px solid var(--cyan); padding-left: 8px;">
-                        <div style="display: flex; gap: 5px; align-items: center;">
-                            <span style="font-size: 8px; background: var(--cyan); color: black; padding: 1px 4px; border-radius: 4px; font-weight: bold;">
-                                ${userRank}
-                            </span>
-                            <span class="author" style="font-size: 10px; color: var(--yellow);">${m.name.toUpperCase()}</span>
+                        <div style="display: flex; gap: 5px; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <span style="font-size: 8px; background: var(--cyan); color: black; padding: 1px 4px; border-radius: 4px; font-weight: bold;">
+                                    ${userRank}
+                                </span>
+                                <span class="author" style="font-size: 10px; color: var(--yellow);">${m.name.toUpperCase()}</span>
+                            </div>
+                            ${deleteBtn}
                         </div>
                         <span class="text" style="display: block; margin-top: 2px;">${m.text}</span>
                     </div>
@@ -711,5 +720,17 @@
         
         NexusEvent.log("System Online.", "Система онлайн.");
     });
+    // Функция для удаления сообщения из Firebase
+    window.deleteMsg = function(msgId) {
+        if (confirm("Удалить это сообщение?")) {
+            db.ref('chat').child(msgId).remove()
+                .then(() => {
+                    if(hapticEnabled) tg.HapticFeedback.notificationOccurred('success');
+                })
+                .catch((error) => {
+                    tg.showAlert("Ошибка удаления: " + error.message);
+                });
+        }
+    };
 
 })();
