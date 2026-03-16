@@ -111,29 +111,27 @@
     };
 
       function initChatSync() {
-              // Логика списка онлайн
-        // Обновленная логика онлайн-статуса
+        // ПРОВЕРЕННАЯ ЛОГИКА ОНЛАЙН
     const onlineRef = db.ref('online_count');
     
-    // Пытаемся получить ID: либо из Telegram, либо создаем временный для теста
-    const currentUserId = user?.id || 'guest_' + Math.floor(Math.random() * 1000);
+    // Пытаемся взять реальный ID телеграма, если нет - генерируем временный
+    const myId = (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) 
+                 ? window.Telegram.WebApp.initDataUnsafe.user.id.toString() 
+                 : 'guest_' + Math.floor(Math.random() * 1000000);
 
-    const myPresence = onlineRef.child(currentUserId);
-    myPresence.set({
-        name: user?.first_name || 'Guest',
-        lastSeen: Date.now()
-    });
-
-    // Это удалит запись, когда ты закроешь приложение
+    const myPresence = onlineRef.child(myId);
+    
+    // Записываем нас в сеть
+    myPresence.set(true);
+    
+    // Удаляем при выходе
     myPresence.onDisconnect().remove();
 
-    // Слушаем изменения и обновляем цифру
+    // Слушаем изменения
     onlineRef.on('value', (snap) => {
         const count = snap.numChildren() || 0;
         const onlineEl = document.getElementById('online-status');
-        if (onlineEl) {
-            onlineEl.innerText = `ONLINE: ${count}`;
-        }
+        if (onlineEl) onlineEl.innerText = `ONLINE: ${count}`;
     });
 
         if(typeof db === 'undefined') return;
