@@ -1,3 +1,24 @@
+// ВАЖНО: Поставь это в самом начале script.js, до всех initChatSync и прочего
+window.deleteMsg = function(msgId) {
+    if (!msgId) return;
+
+    // Сначала проверим, работает ли нажатие вообще
+    console.log("Удаляем сообщение с ID:", msgId);
+
+    window.Telegram.WebApp.showConfirm("Удалить это сообщение?", (isConfirmed) => {
+        if (isConfirmed) {
+            // Используем firebase напрямую, чтобы не зависеть от переменных внутри функций
+            firebase.database().ref('chat').child(msgId).remove()
+                .then(() => {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                })
+                .catch((error) => {
+                    window.Telegram.WebApp.showAlert("Ошибка: " + error.message);
+                });
+        }
+    });
+};
+
 (function() { 
     const tg = window.Telegram.WebApp;
     tg.expand();
@@ -743,25 +764,5 @@
         
         NexusEvent.log("System Online.", "Система онлайн.");
     });
-
-        // Вставь это в самый конец script.js
-    window.deleteMsg = function(msgId) {
-        console.log("Нажато удаление для ID:", msgId);
-        
-        // Используем стандартный confirm для проверки
-        if (confirm("Удалить это сообщение?")) {
-            if (typeof db !== 'undefined') {
-                db.ref('chat').child(msgId).remove()
-                    .then(() => {
-                        console.log("Удалено!");
-                    })
-                    .catch((e) => {
-                        alert("Ошибка базы: " + e.message);
-                    });
-            } else {
-                alert("Ошибка: База данных (db) не найдена!");
-            }
-        }
-    };
 
 })();
