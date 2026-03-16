@@ -175,19 +175,14 @@ window.deleteMsg = function(id) {
                 }
 
                 container.innerHTML += `
-                    <div class="chat-msg" style="margin-bottom: 10px; border-left: 2px solid var(--cyan); padding-left: 8px;">
-                        <div style="display: flex; gap: 5px; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; gap: 5px; align-items: center;">
-                                <span style="font-size: 8px; background: var(--cyan); color: black; padding: 1px 4px; border-radius: 4px; font-weight: bold;">
-                                    ${userRank}
-                                </span>
-                                <span class="author" style="font-size: 10px; color: var(--yellow);">${m.name.toUpperCase()}</span>
-                            </div>
-                            ${deleteBtn}
-                        </div>
-                        <span class="text" style="display: block; margin-top: 2px;">${m.text}</span>
-                    </div>
-                `;
+    <div class="chat-msg" style="margin-bottom: 8px;">
+        <div style="display: flex; gap: 5px; align-items: center;">
+            <span style="font-size: 8px; color: var(--gold); font-weight: bold;">${userRank}</span>
+            <span class="author" style="font-weight: bold;">${m.name}</span>
+        </div>
+        <span class="text" style="display: block; margin-top: 2px;">${m.text}</span>
+    </div>
+`;
             });
             container.scrollTop = container.scrollHeight;
         });
