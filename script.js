@@ -743,25 +743,25 @@
         
         NexusEvent.log("System Online.", "Система онлайн.");
     });
-            window.deleteMsg = function(msgId) {
-        if (!msgId) return;
 
-        tg.showConfirm("Удалить это сообщение?", (isConfirmed) => {
-            if (isConfirmed) {
-                // Прямой путь к Firebase через глобальный объект db
-                const messageRef = firebase.database().ref('chat/' + msgId);
-                
-                messageRef.remove()
+        // Вставь это в самый конец script.js
+    window.deleteMsg = function(msgId) {
+        console.log("Нажато удаление для ID:", msgId);
+        
+        // Используем стандартный confirm для проверки
+        if (confirm("Удалить это сообщение?")) {
+            if (typeof db !== 'undefined') {
+                db.ref('chat').child(msgId).remove()
                     .then(() => {
-                        // Виброотклик
-                        tg.HapticFeedback.notificationOccurred('success');
-                        console.log("Сообщение удалено из базы:", msgId);
+                        console.log("Удалено!");
                     })
-                    .catch((error) => {
-                        tg.showAlert("Ошибка при удалении: " + error.message);
+                    .catch((e) => {
+                        alert("Ошибка базы: " + e.message);
                     });
+            } else {
+                alert("Ошибка: База данных (db) не найдена!");
             }
-        });
+        }
     };
 
 })();
