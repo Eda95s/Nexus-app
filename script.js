@@ -112,19 +112,28 @@
 
       function initChatSync() {
               // Логика списка онлайн
+        // Обновленная логика онлайн-статуса
     const onlineRef = db.ref('online_count');
-    // При подключении увеличиваем счетчик, при отключении — уменьшаем
-    if (user?.id) {
-        const myPresence = onlineRef.child(user.id);
-        myPresence.set(true);
-        myPresence.onDisconnect().remove();
-    }
+    
+    // Пытаемся получить ID: либо из Telegram, либо создаем временный для теста
+    const currentUserId = user?.id || 'guest_' + Math.floor(Math.random() * 1000);
 
-    // Слушаем количество онлайн-игроков
+    const myPresence = onlineRef.child(currentUserId);
+    myPresence.set({
+        name: user?.first_name || 'Guest',
+        lastSeen: Date.now()
+    });
+
+    // Это удалит запись, когда ты закроешь приложение
+    myPresence.onDisconnect().remove();
+
+    // Слушаем изменения и обновляем цифру
     onlineRef.on('value', (snap) => {
         const count = snap.numChildren() || 0;
         const onlineEl = document.getElementById('online-status');
-        if (onlineEl) onlineEl.innerText = `ONLINE: ${count}`;
+        if (onlineEl) {
+            onlineEl.innerText = `ONLINE: ${count}`;
+        }
     });
 
         if(typeof db === 'undefined') return;
