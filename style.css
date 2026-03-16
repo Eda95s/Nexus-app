@@ -160,32 +160,55 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 .sync-btn.ready { border-color: var(--cyan); color: #fff; box-shadow: 0 0 20px var(--cyan); }
 .sync-btn.active { background: var(--red); color: #fff; border-color: #fff; box-shadow: 0 0 30px var(--red); }
 
-/* МОДАЛЬНЫЕ ОКНА */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(15px); }
-.modal-content { background: #050a14; border: 1px solid var(--cyan); border-left: 6px solid var(--cyan); padding: 25px; border-radius: 20px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; }
-.full-modal { height: 80vh; }
-
-.item-grid { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
-.card-nexus { 
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); 
-    padding: 15px; border-radius: 15px; display: grid; grid-template-columns: 1fr auto; 
-    align-items: center; margin-bottom: 12px; gap: 10px;
+/* Модальное окно чата теперь занимает фиксированную высоту */
+#chat-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    height: 80vh; /* Окно занимает 80% высоты экрана */
+    max-height: 500px;
+    padding: 15px;
 }
-.card-info { text-align: left; }
-.card-title { font-size: 0.85rem; font-weight: 900; color: #fff; display: block; margin-bottom: 4px; }
-.card-sub { font-size: 0.65rem; color: var(--cyan); opacity: 0.7; display: block; }
-.card-price { font-size: 0.75rem; font-weight: 900; color: var(--gold); margin-top: 5px; display: block; }
 
-.nexus-btn-buy { background: var(--cyan); color: #000; border: none; padding: 10px 18px; border-radius: 8px; font-family: 'Orbitron'; font-weight: 900; font-size: 0.7rem; }
-.nexus-btn-buy:disabled { opacity: 0.3; background: #555; }
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden; /* Чтобы само окно не дергалось */
+}
 
-.setting-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-.nexus-btn-small { background: rgba(0,212,255,0.1); border: 1px solid var(--cyan); color: var(--cyan); padding: 8px 15px; border-radius: 8px; font-family: 'Orbitron'; font-weight: 900; }
+/* Контейнер сообщений — САМАЯ ВАЖНАЯ ЧАСТЬ */
+.chat-messages {
+    flex: 1; /* Занимает всё свободное пространство */
+    overflow-y: auto; /* Включает прокрутку, если сообщений много */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 5px;
+    margin-bottom: 15px;
+    
+    /* Скроллбар в стиле киберпанк */
+    scrollbar-width: thin;
+    scrollbar-color: var(--cyan) rgba(0,0,0,0.2);
+}
 
-.close-btn-nexus { background: none; border: 1px solid #555; color: #555; padding: 12px; border-radius: 12px; margin-top: 20px; font-family: 'Orbitron'; font-weight: 900; font-size: 0.8rem; }
+/* Чтобы сообщения не ломали ширину */
+.chat-msg {
+    background: rgba(255,255,255,0.05);
+    padding: 8px 12px;
+    border-radius: 10px;
+    border-left: 3px solid #00f2ff;
+    word-break: break-word; /* Чтобы длинные слова не растягивали чат */
+    flex-shrink: 0; /* Чтобы сообщения не сжимались */
+}
 
-.rank-item { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 12px; margin-bottom: 8px; border-right: 4px solid transparent; }
-.active-rank { border-right-color: var(--cyan); background: rgba(0, 212, 255, 0.05); }
+/* Поле ввода всегда прижато к низу */
+.chat-input-area {
+    display: flex;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,212,255,0.2);
+    background: inherit;
+}
 
 /* Навигация */
 .nav-bar { position: fixed; bottom: 0; width: 100%; height: 80px; background: #050a14; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); z-index: 100; }
