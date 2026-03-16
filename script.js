@@ -1,4 +1,4 @@
-(function() { // Защитный слой: скрывает переменные от прямого доступа через консоль браузера
+(function() { 
     const tg = window.Telegram.WebApp;
     tg.expand();
     const user = tg.initDataUnsafe?.user;
@@ -25,7 +25,6 @@
 
     const isWasReset = checkVersionReset();
 
-    // Используем parseFloat для корректного учета пассивного дохода
     let balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
     let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
     let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
@@ -49,7 +48,64 @@
     let dailyStreak = parseInt(localStorage.getItem('nexus_streak')) || 0;
     let refClaimed = localStorage.getItem('nexus_ref_claimed') === 'true';
 
+    let lastRankIndex = -1; 
+    let millionMilestone = Math.floor(balance / 1000000);
     let taskTimers = {};
+
+    // ==========================================
+    // НОВАЯ СИСТЕМА: EVENT LOG (МОНИТОР)
+    // ==========================================
+    const NexusEvent = {
+        log: function(msgEn, msgRu) {
+            const container = document.getElementById('event-log-container');
+            if(!container) return;
+            const text = currentLang === 'RU' ? msgRu : msgEn;
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerText = `> ${text}`;
+            container.appendChild(entry);
+            if(container.childNodes.length > 3) container.removeChild(container.firstChild);
+            setTimeout(() => entry.style.opacity = '0.3', 2000);
+        }
+    };
+
+    // ==========================================
+    // НОВАЯ СИСТЕМА: REALTIME CHAT
+    // ==========================================
+    window.sendMessage = function() {
+        const input = document.getElementById('chat-input');
+        if(!input || !input.value.trim() || typeof db === 'undefined') return;
+        
+        const msgData = {
+            userId: user?.id || 0,
+            name: user?.first_name || 'Anon',
+            text: input.value.trim(),
+            time: Date.now()
+        };
+
+        db.ref('chat').push(msgData);
+        input.value = '';
+        if(hapticEnabled) tg.HapticFeedback.impactOccurred('light');
+    };
+
+    function initChatSync() {
+        if(typeof db === 'undefined') return;
+        db.ref('chat').limitToLast(20).on('value', (snap) => {
+            const container = document.getElementById('chat-messages');
+            if(!container) return;
+            container.innerHTML = '';
+            snap.forEach(child => {
+                const m = child.val();
+                container.innerHTML += `
+                    <div class="chat-msg">
+                        <span class="author">${m.name.toUpperCase()}</span>
+                        <span class="text">${m.text}</span>
+                    </div>
+                `;
+            });
+            container.scrollTop = container.scrollHeight;
+        });
+    }
 
     // ==========================================
     // СИСТЕМЫ ЗАЩИТЫ
@@ -74,6 +130,14 @@
             NexusShield.execute("Core_Balance", () => {
                 balance += amount;
                 if (balance < 0) balance = 0;
+
+                // Проверка на миллионный порог
+                let currentMillion = Math.floor(balance / 1000000);
+                if(currentMillion > millionMilestone) {
+                    millionMilestone = currentMillion;
+                    NexusEvent.log(`MILESTONE: ${currentMillion}M N REACHED!`, `ДОСТИЖЕНИЕ: ${currentMillion}М N СОБРАНО!`);
+                }
+
                 updateUI();
                 saveData();
             });
@@ -88,7 +152,6 @@
                 return false;
             });
         },
-        // Расчет дохода за время отсутствия
         applyPassive: function() {
             if (upgrades.vpn.lvl > 0) {
                 const now = Date.now();
@@ -100,6 +163,7 @@
                         `VPN намайнил: +${earned.toLocaleString()} N` : 
                         `VPN mined: +${earned.toLocaleString()} N`;
                     tg.showAlert(msg);
+                    NexusEvent.log(`Passive income: +${earned}`, `Пассивный доход: +${earned}`);
                 }
             }
         }
@@ -116,7 +180,8 @@
             task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
             donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
             daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "INVITE", wait: "WAIT",
-            go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!", lowBal: "NEED 100K ON BALANCE!"
+            go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!", lowBal: "NEED 100K ON BALANCE!",
+            chatTitle: "GLOBAL CHAT", chatLabel: "CHAT", chatPlace: "Enter message...", send: "SEND"
         },
         RU: {
             mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
@@ -125,7 +190,8 @@
             task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
             donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
             daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "ПРИГЛАСИТЬ", daily: "ЕЖЕДНЕВНЫЙ БОНУС", wait: "ОЖИДАНИЕ",
-            go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!", lowBal: "НУЖНО 100К НА БАЛАНСЕ!"
+            go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!", lowBal: "НУЖНО 100К НА БАЛАНСЕ!",
+            chatTitle: "ОБЩИЙ ЧАТ", chatLabel: "ЧАТ", chatPlace: "Ваше сообщение...", send: "ОТПРАВИТЬ"
         }
     };
 
@@ -146,16 +212,23 @@
         document.getElementById('nav-mining').querySelector('span').innerText = L.mining;
         document.getElementById('nav-market').querySelector('span').innerText = L.market;
         document.getElementById('nav-tasks').querySelector('span').innerText = L.tasks;
+        document.getElementById('nav-chat-label').innerText = L.chatLabel; // ЧАТ В НАВИГАЦИИ
+
         document.getElementById('lbl-energy').innerText = L.energy;
         document.getElementById('lbl-sync').innerText = L.overdrive;
         document.getElementById('m-sys-title').innerText = L.sys;
         document.getElementById('m-market-title').innerText = L.market;
         document.getElementById('m-tasks-title').innerText = L.tasks;
         document.getElementById('m-rank-title').innerText = L.top;
+        document.getElementById('m-chat-title').innerText = L.chatTitle; // ЗАГОЛОВОК ЧАТА
+
         document.getElementById('lbl-lang').innerText = L.lang;
         document.getElementById('lbl-haptic').innerText = L.haptic;
         document.getElementById('lang-btn').innerText = currentLang;
         document.getElementById('haptic-btn').innerText = hapticEnabled ? "ON" : "OFF";
+        
+        const chatInput = document.getElementById('chat-input');
+        if(chatInput) chatInput.placeholder = L.chatPlace;
 
         const dTitle = document.getElementById('m-donate-title');
         const dDesc = document.getElementById('m-donate-desc');
@@ -250,6 +323,7 @@
                 const now = Date.now();
                 if(type === 'mult') activeBoosts.multEnd = Math.max(activeBoosts.multEnd, now) + dayInMs;
                 if(type === 'speed') activeBoosts.speedEnd = Math.max(activeBoosts.speedEnd, now) + dayInMs;
+                NexusEvent.log("PREMIUM ACTIVATE!", "ПРЕМИУМ АКТИВИРОВАН!");
                 saveData(); updateUI();
             }
         } catch (e) { console.error("Payment error:", e); }
@@ -313,7 +387,7 @@
 
         const tasks = [
             { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_protocol' },
-            { id: 'invite', title: L.task2, reward: 15000, url: 'auto' }, // Задание 5 друзей
+            { id: 'invite', title: L.task2, reward: 15000, url: 'auto' }, 
             { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
         ];
 
@@ -324,7 +398,6 @@
             if (isDone) {
                 actionButtons = `<button class="nexus-btn-buy" disabled>${L.claimed}</button>`;
             } else if (task.id === 'invite') {
-                // Автоматическая кнопка для 5 друзей
                 actionButtons = `<button class="nexus-btn-buy" onclick="startAutoInviteTask()">${L.refCopy}</button>`;
             } else {
                 actionButtons = `
@@ -345,7 +418,6 @@
         });
     }
 
-    // Авто-проверка на 5 друзей в фоне
     window.startAutoInviteTask = function() {
         copyRefLink();
         tg.showAlert(currentLang === 'RU' ? "Отправлено! Система в фоне проверит 5 друзей и выдаст награду." : "Sent! System will check for 5 friends in background.");
@@ -363,7 +435,7 @@
                         clearInterval(checkRef);
                     }
                 });
-            }, 5000); // Опрос каждые 5 сек
+            }, 5000); 
         }
     };
 
@@ -396,6 +468,7 @@
     function grantReward(id, reward) {
         if (!tasksDone.includes(id)) {
             balance += reward; tasksDone.push(id);
+            NexusEvent.log(`Task Complete: +${reward} N`, `Задание выполнено: +${reward} N`);
             saveData(); updateUI(); tg.showAlert(`+${reward} N!`);
         }
     }
@@ -405,6 +478,7 @@
         if (now - lastDailyClaim < 86400000) return;
         const reward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
         balance += reward; lastDailyClaim = now; dailyStreak++;
+        NexusEvent.log(`Daily Bonus: +${reward} N`, `Ежедневный бонус: +${reward} N`);
         saveData(); updateUI(); tg.showAlert(`+${reward} N!`);
     };
 
@@ -438,6 +512,7 @@
         let u = upgrades[type];
         if (balance >= u.cost) {
             balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
+            NexusEvent.log(`${type.toUpperCase()} Upgraded to v.${u.lvl}`, `${type.toUpperCase()} Улучшен до v.${u.lvl}`);
             saveData(); updateUI();
         } else { tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!"); }
     };
@@ -453,7 +528,11 @@
         localStorage.setItem('nexus_daily', lastDailyClaim);
         localStorage.setItem('nexus_streak', dailyStreak);
         if (typeof db !== 'undefined' && user?.id) {
-            db.ref('users/' + user.id).update({ balance: balance, v: GAME_VERSION });
+            db.ref('users/' + user.id).update({ 
+                balance: balance, 
+                v: GAME_VERSION, 
+                name: user.first_name 
+            });
         }
     };
 
@@ -488,6 +567,13 @@
         if(m) {
             m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
             if (id === 'rank-modal' && m.style.display === 'flex') loadLeaderboard();
+            if (id === 'chat-modal' && m.style.display === 'flex') {
+                // Маленький хак для прокрутки чата вниз при открытии
+                setTimeout(() => {
+                    const c = document.getElementById('chat-messages');
+                    if(c) c.scrollTop = c.scrollHeight;
+                }, 100);
+            }
         }
     };
 
@@ -517,6 +603,7 @@
     window.activateOverdrive = function() {
         if (odCharge >= 100 && !isOverdrive) {
             isOverdrive = true;
+            NexusEvent.log("OVERDRIVE ENGAGED!", "ОВЕРДРАЙВ ЗАПУЩЕН!");
             let drain = setInterval(() => {
                 odCharge -= 2;
                 if (odCharge <= 0) { odCharge = 0; isOverdrive = false; clearInterval(drain); }
@@ -527,23 +614,28 @@
 
     function updateRank() {
         let rankIndex = 0;
-        let rank = RANKS[0].name;
+        let rankName = RANKS[0].name;
         for (let i = RANKS.length-1; i>=0; i--) { 
             if(balance >= RANKS[i].limit) { 
-                rank = RANKS[i].name; 
+                rankName = RANKS[i].name; 
                 rankIndex = i;
                 break; 
             } 
         }
-        const rb = document.getElementById('rank-badge'); 
-        if(rb) rb.innerText = `RANK: ${rank}`;
 
-        // Обновляем визуал монеты в зависимости от ранга
+        if(rankIndex > lastRankIndex && lastRankIndex !== -1) {
+            NexusEvent.log(`New Rank: ${rankName}!`, `Новый ранг: ${rankName}!`);
+        }
+        lastRankIndex = rankIndex;
+
+        const rb = document.getElementById('rank-badge'); 
+        if(rb) rb.innerText = `RANK: ${rankName}`;
+
         const coin = document.getElementById('coin-visual');
         if (coin) {
             const isPressed = coin.classList.contains('pressed');
-            coin.className = 'nexus-button'; // сбрасываем старые
-            coin.classList.add(`rank-${rankIndex}`); // ставим новый эффект ранга
+            coin.className = 'nexus-button'; 
+            coin.classList.add(`rank-${rankIndex}`); 
             if (isPressed) coin.classList.add('pressed');
         }
     }
@@ -562,21 +654,24 @@
         updateUI();
     }, 100);
 
-    setInterval(saveData, 10000); // Автосохранение раз в 10 сек
+    setInterval(saveData, 10000); 
 
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
         
-        // Реферальный бонус (тоже сократил на один 0 до 5,000)
         const sp = tg.initDataUnsafe?.start_param;
         if (sp && !refClaimed) {
             balance += 5000; refClaimed = true;
             localStorage.setItem('nexus_ref_claimed', 'true');
             tg.showAlert("+5,000 N!");
+            NexusEvent.log("Referral bonus +5k N", "Реферальный бонус +5к N");
         }
 
-        Core.applyPassive(); // Считаем оффлайн доход
+        Core.applyPassive(); 
+        initChatSync(); // Инициализация Firebase чата
         updateUI(); 
+        
+        NexusEvent.log("System Online.", "Система онлайн.");
     });
 
 })();
