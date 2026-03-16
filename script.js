@@ -174,10 +174,6 @@ window.deleteMsg = function(id) {
                     }
                 }
 
-                // Проверяем, админ ли текущий пользователь
-                const isAdmin = (user?.id === ADMIN_ID);
-                const deleteBtn = isAdmin ? `<span onclick="window.deleteMsg('${msgId}')" style="color: #00ffff; cursor: pointer; font-size: 12px; font-weight: bold; padding: 5px;">[УДАЛИТЬ]</span>` : '';
-
                 container.innerHTML += `
                     <div class="chat-msg" style="margin-bottom: 10px; border-left: 2px solid var(--cyan); padding-left: 8px;">
                         <div style="display: flex; gap: 5px; align-items: center; justify-content: space-between;">
