@@ -356,3 +356,9 @@ body::before {
 .chat-msg * {
     pointer-events: none;
 }
+#online-counter {
+    font-size: 10px;
+    color: #00ff88;
+    text-shadow: 0 0 5px #00ff88;
+    margin-bottom: 5px;
+}
