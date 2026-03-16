@@ -743,19 +743,22 @@
         
         NexusEvent.log("System Online.", "Система онлайн.");
     });
-        window.deleteMsg = function(msgId) {
+            window.deleteMsg = function(msgId) {
         if (!msgId) return;
-        
-        tg.showConfirm("Удалить сообщение?", (isConfirmed) => {
+
+        tg.showConfirm("Удалить это сообщение?", (isConfirmed) => {
             if (isConfirmed) {
-                // Прямое обращение к узлу сообщения
-                db.ref('chat/' + msgId).remove()
+                // Прямой путь к Firebase через глобальный объект db
+                const messageRef = firebase.database().ref('chat/' + msgId);
+                
+                messageRef.remove()
                     .then(() => {
+                        // Виброотклик
                         tg.HapticFeedback.notificationOccurred('success');
+                        console.log("Сообщение удалено из базы:", msgId);
                     })
                     .catch((error) => {
-                        // Если база выдаст ошибку прав (Rules), ты увидишь это в алерте
-                        tg.showAlert("Критическая ошибка базы: " + error.message);
+                        tg.showAlert("Ошибка при удалении: " + error.message);
                     });
             }
         });
