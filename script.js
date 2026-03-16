@@ -111,6 +111,22 @@
     };
 
       function initChatSync() {
+              // Логика списка онлайн
+    const onlineRef = db.ref('online_count');
+    // При подключении увеличиваем счетчик, при отключении — уменьшаем
+    if (user?.id) {
+        const myPresence = onlineRef.child(user.id);
+        myPresence.set(true);
+        myPresence.onDisconnect().remove();
+    }
+
+    // Слушаем количество онлайн-игроков
+    onlineRef.on('value', (snap) => {
+        const count = snap.numChildren() || 0;
+        const onlineEl = document.getElementById('online-status');
+        if (onlineEl) onlineEl.innerText = `ONLINE: ${count}`;
+    });
+
         if(typeof db === 'undefined') return;
         const ADMIN_ID = 5240434059; // !!! ЗАМЕНИ ЭТО ЧИСЛО НА СВОЙ ID ИЗ БОТА !!!
 
