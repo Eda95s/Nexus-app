@@ -222,3 +222,115 @@ body::before {
     pointer-events: none;
     opacity: 0.5;
                  }
+                 /* ==================================================== */
+/* ТВОЙ НОВЫЙ БЛОК: NEXUS NETWORK CHAT STYLES           */
+/* ==================================================== */
+
+/* Контейнер истории сообщений */
+#chat-box { 
+    height: 350px; 
+    overflow-y: auto; 
+    display: flex; 
+    flex-direction: column;
+    padding: 15px; 
+    background: rgba(0, 0, 0, 0.4); 
+    border-radius: 15px; 
+    margin: 15px 0;
+    border: 1px inset rgba(0, 212, 255, 0.1);
+    scrollbar-width: none; /* Скрываем скроллбар для чистоты */
+}
+#chat-box::-webkit-scrollbar { display: none; }
+
+/* Сообщения */
+.chat-msg { 
+    margin-bottom: 12px; 
+    padding: 10px 14px; 
+    border-radius: 15px; 
+    max-width: 85%; 
+    font-size: 0.8rem; 
+    position: relative;
+    line-height: 1.3;
+    animation: messageSlide 0.3s ease-out;
+}
+
+@keyframes messageSlide {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Чужие сообщения (Слева) */
+.chat-msg.other { 
+    align-self: flex-start; 
+    background: rgba(255, 255, 255, 0.05); 
+    color: #fff; 
+    border-left: 3px solid var(--cyan);
+    border-bottom-left-radius: 2px;
+}
+
+/* Твои сообщения (Справа) */
+.chat-msg.mine { 
+    align-self: flex-end; 
+    background: linear-gradient(135deg, #1d7e61, #26a17b); 
+    color: #fff; 
+    border-right: 3px solid #fff;
+    border-bottom-right-radius: 2px;
+    box-shadow: 0 4px 12px rgba(38, 161, 123, 0.3);
+}
+
+/* Имя отправителя */
+.chat-msg small { 
+    display: block; 
+    font-size: 0.6rem; 
+    text-transform: uppercase; 
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    font-weight: 900;
+    opacity: 0.7;
+}
+
+.chat-msg.other small { color: var(--cyan); }
+.chat-msg.mine small { color: #fff; text-align: right; }
+
+/* Зона ввода */
+.chat-input-row { 
+    display: flex; 
+    gap: 10px; 
+    padding-top: 5px;
+}
+
+#chat-input { 
+    flex: 1; 
+    background: rgba(0, 0, 0, 0.6); 
+    border: 1px solid var(--steel); 
+    border-radius: 10px; 
+    color: white; 
+    padding: 12px; 
+    font-family: 'Orbitron';
+    font-size: 0.75rem;
+    transition: 0.3s;
+}
+
+#chat-input:focus { 
+    outline: none; 
+    border-color: var(--cyan); 
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+/* Кастомная кнопка для чата */
+.chat-send-btn {
+    background: var(--cyan);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 0 15px;
+    font-weight: 900;
+    font-family: 'Orbitron';
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+
+/* Адаптация под мобильную клавиатуру */
+@media (max-height: 600px) {
+    .full-modal { height: 95vh; }
+    #chat-box { height: 200px; }
+}
