@@ -175,12 +175,18 @@ window.deleteMsg = function(id) {
                 }
 
                 container.innerHTML += `
-    <div class="chat-msg" style="margin-bottom: 8px;">
-        <div style="display: flex; gap: 5px; align-items: center;">
-            <span style="font-size: 8px; color: var(--gold); font-weight: bold;">${userRank}</span>
-            <span class="author" style="font-weight: bold;">${m.name}</span>
+    <div class="chat-msg" style="margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <span style="font-size: 9px; color: #ffca28; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+                ${userRank}
+            </span>
+            <span class="author" style="font-weight: bold; color: #ffffff; font-size: 14px;">
+                ${m.name}
+            </span>
         </div>
-        <span class="text" style="display: block; margin-top: 2px;">${m.text}</span>
+        <div class="text" style="display: block; margin-top: 3px; color: #e0e0e0; font-size: 14px;">
+            ${m.text}
+        </div>
     </div>
 `;
             });
