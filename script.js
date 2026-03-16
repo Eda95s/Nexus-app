@@ -1,18 +1,18 @@
-window.deleteMsg = function(msgId) {
-    if (!msgId) return;
-
-    // Сначала проверим, работает ли нажатие вообще
-    console.log("Удаляем сообщение с ID:", msgId);
-
-    window.Telegram.WebApp.showConfirm("Удалить это сообщение?", (isConfirmed) => {
-        if (isConfirmed) {
-            // Используем firebase напрямую, чтобы не зависеть от переменных внутри функций
-            firebase.database().ref('chat').child(msgId).remove()
+// Самая первая строка файла
+window.deleteMsg = function(id) {
+    if (!id) return;
+    
+    const tg = window.Telegram.WebApp;
+    
+    tg.showConfirm("Удалить сообщение?", (ok) => {
+        if (ok) {
+            // Используем firebase.database() напрямую, чтобы не зависеть от переменной db
+            firebase.database().ref('chat').child(id).remove()
                 .then(() => {
-                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                    tg.HapticFeedback.notificationOccurred('success');
                 })
-                .catch((error) => {
-                    window.Telegram.WebApp.showAlert("Ошибка: " + error.message);
+                .catch((e) => {
+                    tg.showAlert("Ошибка: " + e.message);
                 });
         }
     });
