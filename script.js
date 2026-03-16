@@ -177,7 +177,7 @@ window.deleteMsg = function(msgId) {
 
                 // Проверяем, админ ли текущий пользователь
                 const isAdmin = (user?.id === ADMIN_ID);
-                const deleteBtn = isAdmin ? `<span onclick="deleteMsg('${msgId}')" style="color: #00ffff; cursor: pointer; font-size: 12px; font-weight: bold; padding: 5px;">[УДАЛИТЬ]</span>` : '';
+                const deleteBtn = isAdmin ? `<span onclick="window.deleteMsg('${msgId}')" style="color: #00ffff; cursor: pointer; font-size: 12px; font-weight: bold; padding: 5px;">[УДАЛИТЬ]</span>` : '';
 
                 container.innerHTML += `
                     <div class="chat-msg" style="margin-bottom: 10px; border-left: 2px solid var(--cyan); padding-left: 8px;">
