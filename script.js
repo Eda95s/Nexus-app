@@ -24,7 +24,7 @@
     }
 
     const isWasReset = checkVersionReset();
-
+    
     let balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
     let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
     let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
@@ -51,6 +51,7 @@
     let lastRankIndex = -1; 
     let millionMilestone = Math.floor(balance / 1000000);
     let taskTimers = {};
+    let lastMessageTime = 0; // Время последней отправки сообщения
 
     // ==========================================
     // НОВАЯ СИСТЕМА: EVENT LOG (МОНИТОР)
@@ -72,48 +73,77 @@
     // ==========================================
     // НОВАЯ СИСТЕМА: REALTIME CHAT
     // ==========================================
-    window.sendMessage = function() {
+        window.sendMessage = function() {
         const input = document.getElementById('chat-input');
-        if(!input || !input.value.trim() || typeof db === 'undefined') return;
+        if(!input || typeof db === 'undefined') return;
         
+        const text = input.value.trim();
+        if(!text) return;
+
+        const now = Date.now();
+
+        // Проверка на кулдаун в 5 секунд
+        if (now - lastMessageTime < 5000) {
+            const secondsLeft = Math.ceil((5000 - (now - lastMessageTime)) / 1000);
+            tg.showAlert(`Подождите ${secondsLeft} сек. перед отправкой!`);
+            return;
+        }
+
+        // Проверка на длину сообщения
+        if (text.length > 100) {
+            tg.showAlert("Сообщение слишком длинное!");
+            return;
+        }
+
         const msgData = {
             userId: user?.id || 0,
             name: user?.first_name || 'Anon',
-            text: input.value.trim(),
-            time: Date.now()
+            text: text,
+            time: now,
+            balance: balance
         };
 
         db.ref('chat').push(msgData);
         input.value = '';
+        lastMessageTime = now; // Запоминаем время отправки
+
         if(hapticEnabled) tg.HapticFeedback.impactOccurred('light');
     };
 
-    function initChatSync() {
-    if(typeof db === 'undefined') return;
-    db.ref('chat').limitToLast(20).on('value', (snap) => {
-        const container = document.getElementById('chat-messages');
-        if(!container) return;
+      function initChatSync() {
+        if(typeof db === 'undefined') return;
+        db.ref('chat').limitToLast(20).on('value', (snap) => {
+            const container = document.getElementById('chat-messages');
+            if(!container) return;
+            container.innerHTML = '';
+            
+            snap.forEach(child => {
+                const m = child.val();
+                
+                // Находим название ранга по лимиту баллов (используем твой массив RANKS)
+                let userRank = RANKS[0].name;
+                for (let i = RANKS.length - 1; i >= 0; i--) {
+                    if ((m.balance || 0) >= RANKS[i].limit) {
+                        userRank = RANKS[i].name;
+                        break;
+                    }
+                }
 
-        container.innerHTML = ''; // Очищаем один раз
-        snap.forEach(child => {
-            const m = child.val();
-            // Используем обычный div без лишних оберток
-            container.innerHTML += `
-                <div class="chat-msg" style="margin-bottom: 8px; padding: 5px; border-left: 2px solid var(--cyan);">
-                    <div style="color: var(--yellow); font-size: 10px; font-weight: bold;">${m.name}</div>
-                    <div style="color: white; font-size: 13px;">${m.text}</div>
-                </div>
-            `;
+                container.innerHTML += `
+                    <div class="chat-msg" style="margin-bottom: 10px; border-left: 2px solid var(--cyan); padding-left: 8px;">
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <span style="font-size: 8px; background: var(--cyan); color: black; padding: 1px 4px; border-radius: 4px; font-weight: bold;">
+                                ${userRank}
+                            </span>
+                            <span class="author" style="font-size: 10px; color: var(--yellow);">${m.name.toUpperCase()}</span>
+                        </div>
+                        <span class="text" style="display: block; margin-top: 2px;">${m.text}</span>
+                    </div>
+                `;
+            });
+            container.scrollTop = container.scrollHeight;
         });
-        
-        // Эта строка прокручивает в самый низ при получении сообщения
-        container.scrollTo({
-            top: container.scrollHeight,
-            behavior: 'smooth'
-        });
-    });
-}
-
+    }
 
     // ==========================================
     // СИСТЕМЫ ЗАЩИТЫ
