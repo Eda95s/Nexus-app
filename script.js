@@ -721,16 +721,24 @@
         NexusEvent.log("System Online.", "Система онлайн.");
     });
     // Функция для удаления сообщения из Firebase
+        // ПОД ЗАМЕНУ (в самый конец файла, перед последней скобкой })();
     window.deleteMsg = function(msgId) {
-        if (confirm("Удалить это сообщение?")) {
+        // Убираем confirm для теста, чтобы проверить само удаление
+        console.log("Попытка удаления сообщения:", msgId);
+        
+        if (typeof db !== 'undefined') {
             db.ref('chat').child(msgId).remove()
                 .then(() => {
+                    console.log("Удалено успешно");
                     if(hapticEnabled) tg.HapticFeedback.notificationOccurred('success');
                 })
-                .catch((error) => {
-                    tg.showAlert("Ошибка удаления: " + error.message);
+                .catch((e) => {
+                    console.error("Ошибка Firebase:", e);
+                    tg.showAlert("Ошибка: " + e.message);
                 });
+        } else {
+            tg.showAlert("Ошибка: База данных не подключена");
         }
     };
-
+    
 })();
