@@ -89,23 +89,30 @@
     };
 
     function initChatSync() {
-        if(typeof db === 'undefined') return;
-        db.ref('chat').limitToLast(20).on('value', (snap) => {
-            const container = document.getElementById('chat-messages');
-            if(!container) return;
-            container.innerHTML = '';
-            snap.forEach(child => {
-                const m = child.val();
-                container.innerHTML += `
-                    <div class="chat-msg">
-                        <span class="author">${m.name.toUpperCase()}</span>
-                        <span class="text">${m.text}</span>
-                    </div>
-                `;
-            });
-            container.scrollTop = container.scrollHeight;
+    if(typeof db === 'undefined') return;
+    
+    db.ref('chat').limitToLast(30).on('value', (snap) => {
+        const container = document.getElementById('chat-messages');
+        if(!container) return;
+        
+        container.innerHTML = '';
+        snap.forEach(child => {
+            const m = child.val();
+            container.innerHTML += `
+                <div class="chat-msg">
+                    <span class="author">${m.name.toUpperCase()}</span>
+                    <span class="text">${m.text}</span>
+                </div>
+            `;
         });
-    }
+
+        // АВТО-ПРОКРУТКА ВНИЗ
+        container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth'
+        });
+    });
+}
 
     // ==========================================
     // СИСТЕМЫ ЗАЩИТЫ
