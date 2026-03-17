@@ -472,11 +472,13 @@ window.deleteMsg = function(id) {
             </div>
         `;
 
-        const tasks = [
-            { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_protocol' },
-            { id: 'invite', title: L.task2, reward: 15000, url: 'auto' }, 
-            { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
-        ];
+        // Внутри renderTasks() измени описание задачи
+const tasks = [
+    { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_protocol' },
+    // ИЗМЕНЕНО: теперь упор на пассивный доход
+    { id: 'invite', title: currentLang === 'RU' ? "СЕТЬ МАЙНЕРОВ (5 чел)" : "MINING NETWORK (5 ppl)", reward: 15000, url: 'auto' }, 
+    { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
+];
 
         tasks.forEach(task => {
             const isDone = tasksDone.includes(task.id);
@@ -505,9 +507,12 @@ window.deleteMsg = function(id) {
         });
     }
 
-    window.startAutoInviteTask = function() {
+        window.startAutoInviteTask = function() {
         copyRefLink();
-        tg.showAlert(currentLang === 'RU' ? "Отправлено! Система в фоне проверит 5 друзей и выдаст награду." : "Sent! System will check for 5 friends in background.");
+        const msg = currentLang === 'RU' 
+            ? "Ссылка скопирована! Когда 5 друзей зайдут, бонус и +10% дохода активируются автоматически." 
+            : "Link copied! Bonus and +10% income will activate when 5 friends join.";
+        tg.showAlert(msg);
         
         if (typeof db !== 'undefined' && user?.id) {
             const checkRef = setInterval(() => {
@@ -518,11 +523,12 @@ window.deleteMsg = function(id) {
                 db.ref('users/' + user.id + '/referrals_count').once('value', (snap) => {
                     const count = snap.val() || 0;
                     if (count >= 5) {
-                        grantReward('invite', 15000);
+                        grantReward('invite', 15000); // Даем разовый бонус
+                        NexusEvent.log("Network Active: +50% Speed", "Сеть активна: Скорость +50%");
                         clearInterval(checkRef);
                     }
                 });
-            }, 5000); 
+            }, 10000); // Проверка раз в 10 секунд
         }
     };
 
@@ -727,11 +733,19 @@ window.deleteMsg = function(id) {
         }
     }
 
-    // ==========================================
-    // ИНИЦИАЛИЗАЦИЯ И ТАЙМЕРЫ
-    // ==========================================
-    setInterval(() => {
-        if (upgrades.vpn.lvl > 0) balance += (upgrades.vpn.lvl * 2) / 10;
+        setInterval(() => {
+        // Базовый доход от твоего VPN
+        let currentIncome = (upgrades.vpn.lvl * 2) / 10;
+        
+        // --- НОВАЯ ЛОГИКА РЕФЕРАЛЬНОГО ДОХОДА ---
+        // Если задание на 5 друзей выполнено, добавляем +10% от их добычи
+        // (Предположим, что активный друг качает как ты. 5 друзей по 10% = +50% к твоему доходу)
+        if (tasksDone.includes('invite')) {
+            currentIncome *= 1.5; // Увеличиваем пассивный доход в 1.5 раза
+        }
+        
+        balance += currentIncome;
+        
         const now = Date.now();
         const regenStep = (activeBoosts.speedEnd > now) ? 1.5 : 0.5;
         if (energy < 1000) energy = Math.min(1000, energy + regenStep);
