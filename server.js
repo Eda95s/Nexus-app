@@ -7,9 +7,12 @@ app.use(cors());
 app.use(express.json());
 
 // Инициализация Firebase Admin (ключи мы добавим в переменные окружения на Render)
+// Инициализация Firebase через переменную окружения
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
 admin.initializeApp({
-  credential: admin.credential.cert(require('./serviceAccountKey.json')),
-  databaseURL: "https://nexus-app-6769e-default-rtdb.europe-west1.firebasedatabase.app/"
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://nexus-app-6769e-default-rtdb.europe-west1.firebasedatabase.app"
 });
 
 const db = admin.database();
