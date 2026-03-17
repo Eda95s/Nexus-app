@@ -45,37 +45,6 @@ async function checkServer() {
 }
 checkServer();
 
-async function syncWithServer() {
-    console.log("Пытаюсь отправить данные на: " + API_URL + "/api/click"); // ДОБАВЬ ЭТО
-    const user = window.Telegram?.WebApp?.initDataUnsafe?.user || { id: "5240434059", first_name: "Вася" };
-    
-    if (accumulatedClicks > 0) {
-        // ... остальной код
-        try {
-            const response = await fetch(`${API_URL}/api/click`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: String(user.id),
-                    name: user.first_name,
-                    clicks: accumulatedClicks
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Только после успеха сервера обновляем баланс и сбрасываем счетчик
-                balance = data.balance;
-                accumulatedClicks = 0;
-                updateUI();
-                console.log("Синхронизация успешна!");
-            }
-        } catch (e) {
-            console.error("Сервер недоступен, клики копятся локально...");
-        }
-    }
-}
-
 // Вызывай syncWithServer() каждые 5-10 секунд или при закрытии
 setInterval(syncWithServer, 5000);
 
