@@ -1,15 +1,13 @@
 const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
-
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-// Инициализация Firebase Admin (ключи мы добавим в переменные окружения на Render)
-// Инициализация Firebase через переменную окружения
+// Инициализация базы через твою переменную FIREBASE_SERVICE_ACCOUNT
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://nexus-app-6769e-default-rtdb.europe-west1.firebasedatabase.app"
@@ -17,39 +15,40 @@ admin.initializeApp({
 
 const db = admin.database();
 
-// ГЛАВНЫЙ МАРШРУТ: Клик
+// МАРШРУТ 1: Сохранение кликов и ИМЕНИ
 app.post('/api/click', async (req, res) => {
     const { userId, name, clicks } = req.body;
-
     if (!userId) return res.status(400).send("No userId");
 
-    try {
-        const userRef = db.ref(`users/${userId}`);
-        const snapshot = await userRef.once('value');
-        const userData = snapshot.val() || { balance: 0 };
+    const userRef = db.ref(`users/${userId}`);
+    const snapshot = await userRef.once('value');
+    const userData = snapshot.val() || { balance: 0 };
 
-        const newBalance = (userData.balance || 0) + (clicks || 0);
+    const newBalance = (userData.balance || 0) + (clicks || 0);
+    
+    // Записываем и новый баланс, и имя из Telegram
+    await userRef.update({
+        balance: newBalance,
+        name: name || "Игрок"
+    });
 
-        // ВАЖНО: записываем и баланс, и имя
-        await userRef.update({
-            balance: newBalance,
-            name: name || "Игрок" 
-        });
-
-        console.log(`User ${userId} (${name}) updated. New balance: ${newBalance}`);
-
-        res.status(200).json({ 
-            balance: newBalance,
-            name: name || "Игрок" 
-        });
-    } catch (error) {
-        console.error("Ошибка Firebase:", error);
-        res.status(500).send("Server Error");
-    }
+    res.status(200).json({ balance: newBalance });
 });
 
+// МАРШРУТ 2: Список лидеров (чтобы не висело SYNCING)
+app.get('/api/leaders', async (req, res) => {
+    const usersRef = db.ref('users');
+    const snapshot = await usersRef.once('value');
+    const users = snapshot.val() || {};
+    
+    // Превращаем базу в список и сортируем по балансу
+    const leaderboard = Object.keys(users).map(id => ({
+        name: users[id].name || "Анон",
+        balance: users[id].balance || 0
+    })).sort((a, b) => b.balance - a.balance).slice(0, 10);
 
-const PORT = process.env.PORT || 3000;
+    res.json(leaderboard);
+});
+
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
