@@ -16,7 +16,7 @@ const db = admin.database();
 
 // ГЛАВНЫЙ МАРШРУТ: Клик
 app.post('/api/click', async (req, res) => {
-    const { userId, name, clicks } = req.body; // Сервер теперь ждет 'name'
+    const { userId, name, clicks } = req.body;
 
     if (!userId) return res.status(400).send("No userId");
 
@@ -27,18 +27,25 @@ app.post('/api/click', async (req, res) => {
 
         const newBalance = (userData.balance || 0) + (clicks || 0);
 
-        // Записываем и баланс, и ИМЯ
+        // ВАЖНО: записываем и баланс, и имя
         await userRef.update({
             balance: newBalance,
-            name: name || "Анон" 
+            name: name || "Игрок" 
         });
 
-        res.status(200).json({ balance: newBalance });
+        console.log(`User ${userId} (${name}) updated. New balance: ${newBalance}`);
+
+        res.status(200).json({ 
+            balance: newBalance,
+            name: name || "Игрок" 
+        });
     } catch (error) {
-        console.error(error);
+        console.error("Ошибка Firebase:", error);
         res.status(500).send("Server Error");
     }
 });
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
