@@ -77,32 +77,35 @@ window.deleteMsg = function(id) {
     const userId = user?.id || "unknown"; // ID для сервера
 
     // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ (ДОБАВЛЕНО) ---
-async function saveData() {
-    const user = tg.initDataUnsafe?.user;
-    if (user && accumulatedClicks > 0) {
-        const clicksToSend = accumulatedClicks;
-        try {
-            const response = await fetch(`${API_URL}/api/click`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.id,
-                    name: user.first_name,
-                    clicks: clicksToSend
-                })
-            });
+async function syncWithServer() {
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user; // Берем данные напрямую из ТГ
+    if (!user) {
+        console.error("Ошибка: Игра запущена не в Telegram");
+        return;
+    }
 
-            if (response.ok) {
-                const data = await response.json();
-                accumulatedClicks -= clicksToSend; // Вычитаем только то, что отправили
-                balance = data.balance; // Берем реальный баланс из базы
-                updateUI();
-            }
-        } catch (e) {
-            console.error("Сервер спит, попробуем позже");
+    try {
+        const response = await fetch(`${API_URL}/api/click`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: user.id, // ID из Телеграма
+                name: user.first_name, // Имя из Телеграма
+                clicks: accumulatedClicks // Твои накопленные клики
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            balance = data.balance; // Сервер возвращает актуальный баланс из базы
+            accumulatedClicks = 0; // Обнуляем только после подтверждения сервером
+            updateUI();
         }
+    } catch (e) {
+        console.error("Ошибка связи с сервером:", e);
     }
 }
+
     // ==========================================
     // НОВАЯ СИСТЕМА: EVENT LOG (МОНИТОР)
     // ==========================================
