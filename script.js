@@ -78,31 +78,38 @@ window.deleteMsg = function(id) {
 
     // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ (ДОБАВЛЕНО) ---
 async function syncWithServer() {
-    const user = window.Telegram?.WebApp?.initDataUnsafe?.user; // Берем данные напрямую из ТГ
-    if (!user) {
-        console.error("Ошибка: Игра запущена не в Telegram");
-        return;
-    }
+    // 1. Берем данные пользователя (с проверкой для тестов вне ТГ)
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user || { id: "test_user", first_name: "LocalTest" };
+    
+    // 2. Проверяем, есть ли что сохранять
+    if (accumulatedClicks > 0) {
+        console.log("Отправка кликов на сервер:", accumulatedClicks);
+        try {
+            const response = await fetch(`${API_URL}/api/click`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                mode: 'cors', 
+                body: JSON.stringify({
+                    userId: String(user.id),
+                    name: user.first_name,
+                    clicks: accumulatedClicks
+                })
+            });
 
-    try {
-        const response = await fetch(`${API_URL}/api/click`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: user.id, // ID из Телеграма
-                name: user.first_name, // Имя из Телеграма
-                clicks: accumulatedClicks // Твои накопленные клики
-            })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            balance = data.balance; // Сервер возвращает актуальный баланс из базы
-            accumulatedClicks = 0; // Обнуляем только после подтверждения сервером
-            updateUI();
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Данные в базе обновлены! Баланс:", data.balance);
+                
+                // Обновляем баланс в игре тем, что прислал сервер
+                balance = data.balance;
+                accumulatedClicks = 0;
+                updateUI();
+            } else {
+                console.error("Сервер ответил ошибкой:", response.status);
+            }
+        } catch (e) {
+            console.error("Ошибка сети (проверь API_URL и Render):", e);
         }
-    } catch (e) {
-        console.error("Ошибка связи с сервером:", e);
     }
 }
 
