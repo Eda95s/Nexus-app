@@ -79,20 +79,26 @@ window.deleteMsg = function(id) {
     // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ (ДОБАВЛЕНО) ---
     async function saveData() {
     const user = tg.initDataUnsafe?.user;
-    if (accumulatedClicks > 0 && user) {
+    // Проверяем: есть ли юзер и были ли вообще клики
+    if (user && accumulatedClicks > 0) {
         try {
-            await fetch(`${API_URL}/api/click`, {
+            const response = await fetch(`${API_URL}/api/click`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId: user.id,
-                    name: user.first_name, // ОТПРАВЛЯЕМ ИМЯ
-                    clicks: accumulatedClicks
+                    name: user.first_name || "Player",
+                    clicks: accumulatedClicks // Отправляем накопленные клики
                 })
             });
-            accumulatedClicks = 0;
+
+            if (response.ok) {
+                // Если сервер ответил "ОК", только тогда обнуляем клики в телефоне
+                accumulatedClicks = 0;
+                console.log("Сохранено на сервере!");
+            }
         } catch (e) {
-            console.error("Ошибка сохранения:", e);
+            console.error("Сервер не ответил, клики остались в телефоне:", e);
         }
     }
 }
