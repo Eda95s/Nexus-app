@@ -9,10 +9,15 @@ app.use(express.json());
 // Инициализация через переменную окружения (Admin SDK)
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://nexus-app-6769e-default-rtdb.europe-west1.firebasedatabase.app"
-});
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://nexus-app-6769e-default-rtdb.europe-west1.firebasedatabase.app",
+    databaseAuthVariableOverride: {
+      uid: "my-service-worker" // Это заставляет Firebase видеть сервер как авторизованного юзера
+    }
+  });
+}
 
 const db = admin.database();
 
