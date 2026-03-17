@@ -16,23 +16,27 @@ const db = admin.database();
 
 // ГЛАВНЫЙ МАРШРУТ: Клик
 app.post('/api/click', async (req, res) => {
-    const { userId, initData } = req.body;
+    const { userId, name, clicks } = req.body; // Сервер теперь ждет 'name'
 
-    // ТУТ БУДЕТ ПРОВЕРКА initData (подлинность от Telegram)
-    
-    const userRef = db.ref(`users/${userId}`);
-    const snapshot = await userRef.once('value');
-    let userData = snapshot.val() || { balance: 0, energy: 1000, lastUpdate: Date.now() };
+    if (!userId) return res.status(400).send("No userId");
 
-    // Логика начисления на сервере
-    const clickPower = 1; // Берем из БД в зависимости от уровня ноды
-    if (userData.energy >= 2) {
-        userData.balance += clickPower;
-        userData.energy -= 2;
-        await userRef.update(userData);
-        res.json({ success: true, balance: userData.balance, energy: userData.energy });
-    } else {
-        res.status(400).json({ error: "No energy" });
+    try {
+        const userRef = db.ref(`users/${userId}`);
+        const snapshot = await userRef.once('value');
+        const userData = snapshot.val() || { balance: 0 };
+
+        const newBalance = (userData.balance || 0) + (clicks || 0);
+
+        // Записываем и баланс, и ИМЯ
+        await userRef.update({
+            balance: newBalance,
+            name: name || "Анон" 
+        });
+
+        res.status(200).json({ balance: newBalance });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Server Error");
     }
 });
 const PORT = process.env.PORT || 3000;
