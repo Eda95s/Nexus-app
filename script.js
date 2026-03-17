@@ -77,26 +77,27 @@ window.deleteMsg = function(id) {
     const userId = user?.id || "unknown"; // ID для сервера
 
     // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ (ДОБАВЛЕНО) ---
-    async function syncWithServer() {
+    async function saveData() {
+    // Возвращаем определение пользователя, которое ты удалил
+    const user = tg.initDataUnsafe?.user; 
+    
+    if (accumulatedClicks > 0) {
         try {
-            const response = await fetch(`${API_URL}/api/click`, {
+            await fetch(`${API_URL}/api/click`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-    userId: user?.id || "unknown",
-    name: user?.first_name || "Игрок", // <-- Добавляем эту строку с запятой в конце
-    clicks: accumulatedClicks
-})
+                    userId: user?.id || "unknown",
+                    name: user?.first_name || "Игрок", // Теперь это сработает
+                    clicks: accumulatedClicks
+                })
             });
-            if (response.ok) {
-                const data = await response.json();
-                balance = data.balance;
-                updateUI();
-            }
+            accumulatedClicks = 0; 
         } catch (e) {
-            console.error("Sync error:", e);
+            console.error("Ошибка сохранения:", e);
         }
     }
+}
 
     // ==========================================
     // НОВАЯ СИСТЕМА: EVENT LOG (МОНИТОР)
