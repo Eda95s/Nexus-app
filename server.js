@@ -1,9 +1,15 @@
 const express = require('express');
 const admin = require('firebase-admin');
-const cors = require('cors');
+const cors = require('cors'); // Убедись, что cors установлен
 const app = express();
 
-app.use(cors());
+// Это разрешит игре на GitHub Pages общаться с сервером на Render
+app.use(cors({
+    origin: '*', 
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type']
+}));
+
 app.use(express.json());
 
 // Инициализация
