@@ -18,21 +18,25 @@ const db = admin.database();
 // МАРШРУТ 1: Сохранение кликов и ИМЕНИ
 app.post('/api/click', async (req, res) => {
     const { userId, name, clicks } = req.body;
-    if (!userId) return res.status(400).send("No userId");
-
-    const userRef = db.ref(`users/${userId}`);
-    const snapshot = await userRef.once('value');
-    const userData = snapshot.val() || { balance: 0 };
-
-    const newBalance = (userData.balance || 0) + (clicks || 0);
     
-    // Записываем и новый баланс, и имя из Telegram
-    await userRef.update({
-        balance: newBalance,
-        name: name || "Игрок"
-    });
+    try {
+        const userRef = db.ref(`users/${userId}`);
+        const snapshot = await userRef.once('value');
+        const userData = snapshot.val() || { balance: 0 };
 
-    res.status(200).json({ balance: newBalance });
+        // ГЛАВНОЕ: Плюсуем новые клики к старому балансу
+        const newBalance = (userData.balance || 0) + (clicks || 0);
+
+        await userRef.update({
+            balance: newBalance,
+            name: name || "Игрок"
+        });
+
+        res.status(200).json({ balance: newBalance });
+    } catch (error) {
+        console.error("Ошибка записи в Firebase:", error);
+        res.status(500).send("Error");
+    }
 });
 
 // МАРШРУТ 2: Список лидеров (чтобы не висело SYNCING)
