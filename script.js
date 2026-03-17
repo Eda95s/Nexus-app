@@ -29,21 +29,17 @@ window.deleteMsg = function(id) {
     const GAME_VERSION = "2.2.0_NEW_ECONOMY"; 
     const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o";
     const CHANNEL_ID = "-1002086386401";
-    // --- ДОБАВЛЕНО ДЛЯ СЕРВЕРА ---
-    // В самом верху файла проверь URL
-// Используем точный адрес, который сработал в браузере
-const API_URL = "https://nexus-backend-9vim.onrender.com".replace(/\/$/, ""); 
+    const API_URL = "https://nexus-backend-9vim.onrender.com".replace(/\/$/, ""); 
 
-// Добавим проверку связи при запуске
-async function checkServer() {
-    try {
-        const res = await fetch(`${API_URL}/api/leaders`);
-        if (res.ok) console.log("✅ СВЯЗЬ С СЕРВЕРОМ УСТАНОВЛЕНА");
-    } catch (e) {
-        console.error("❌ СЕРВЕР НЕ ОТВЕЧАЕТ. ПРОВЕРЬ API_URL");
+    async function checkServer() {
+        try {
+            const res = await fetch(`${API_URL}/api/leaders`);
+            if (res.ok) console.log("✅ СВЯЗЬ С СЕРВЕРОМ УСТАНОВЛЕНА");
+        } catch (e) {
+            console.error("❌ СЕРВЕР НЕ ОТВЕЧАЕТ. ПРОВЕРЬ API_URL");
+        }
     }
-}
-checkServer();
+    checkServer();
     
     // ==========================================
     // ИГРОВЫЕ ДАННЫЕ
@@ -61,7 +57,7 @@ checkServer();
     const isWasReset = checkVersionReset();
     
     let balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
-    let accumulatedClicks = 0; // ОБЯЗАТЕЛЬНО
+    let accumulatedClicks = 0; // Счётчик для отправки на сервер
     let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
     let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
         node: { lvl: 1, cost: 45000, power: 1 },
@@ -87,48 +83,43 @@ checkServer();
     let lastRankIndex = -1; 
     let millionMilestone = Math.floor(balance / 1000000);
     let taskTimers = {};
-    let lastMessageTime = 0; // Время последней отправки сообщения
-    const userId = user?.id || "unknown"; // ID для сервера
+    let lastMessageTime = 0; 
+    const userId = user?.id || "unknown"; 
 
-    // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ (ДОБАВЛЕНО) ---
-async function syncWithServer() {
-    // 1. Берем данные пользователя (с проверкой для тестов вне ТГ)
-    const user = window.Telegram?.WebApp?.initDataUnsafe?.user || { id: "test_user", first_name: "LocalTest" };
-    
-    // 2. Проверяем, есть ли что сохранять
-    if (accumulatedClicks > 0) {
-        console.log("Отправка кликов на сервер:", accumulatedClicks);
-        try {
-            const response = await fetch(`${API_URL}/api/click`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                mode: 'cors', 
-                body: JSON.stringify({
-                    userId: String(user.id),
-                    name: user.first_name,
-                    clicks: accumulatedClicks
-                })
-            });
+    // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ ---
+    async function syncWithServer() {
+        const currentUser = window.Telegram?.WebApp?.initDataUnsafe?.user || { id: "test_user", first_name: "LocalTest" };
+        
+        if (accumulatedClicks > 0) {
+            console.log("Отправка кликов на сервер:", accumulatedClicks);
+            try {
+                const response = await fetch(`${API_URL}/api/click`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'cors', 
+                    body: JSON.stringify({
+                        userId: String(currentUser.id),
+                        name: currentUser.first_name,
+                        clicks: accumulatedClicks
+                    })
+                });
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Данные в базе обновлены! Баланс:", data.balance);
-                
-                // Обновляем баланс в игре тем, что прислал сервер
-                balance = data.balance;
-                accumulatedClicks = 0;
-                updateUI();
-            } else {
-                console.error("Сервер ответил ошибкой:", response.status);
+                if (response.ok) {
+                    const data = await response.json();
+                    balance = data.balance;
+                    accumulatedClicks = 0;
+                    updateUI();
+                } else {
+                    console.error("Сервер ответил ошибкой:", response.status);
+                }
+            } catch (e) {
+                console.error("Ошибка сети:", e);
             }
-        } catch (e) {
-            console.error("Ошибка сети (проверь API_URL и Render):", e);
         }
     }
-}
 
     // ==========================================
-    // НОВАЯ СИСТЕМА: EVENT LOG (МОНИТОР)
+    // НОВАЯ СИСТЕМА: EVENT LOG
     // ==========================================
     const NexusEvent = {
         log: function(msgEn, msgRu) {
@@ -147,7 +138,7 @@ async function syncWithServer() {
     // ==========================================
     // НОВАЯ СИСТЕМА: REALTIME CHAT
     // ==========================================
-        window.sendMessage = function() {
+    window.sendMessage = function() {
         const input = document.getElementById('chat-input');
         if(!input || typeof db === 'undefined') return;
         
@@ -155,15 +146,12 @@ async function syncWithServer() {
         if(!text) return;
 
         const now = Date.now();
-
-        // Проверка на кулдаун в 5 секунд
         if (now - lastMessageTime < 5000) {
             const secondsLeft = Math.ceil((5000 - (now - lastMessageTime)) / 1000);
             tg.showAlert(`Подождите ${secondsLeft} сек. перед отправкой!`);
             return;
         }
 
-        // Проверка на длину сообщения
         if (text.length > 100) {
             tg.showAlert("Сообщение слишком длинное!");
             return;
@@ -179,37 +167,27 @@ async function syncWithServer() {
 
         db.ref('chat').push(msgData);
         input.value = '';
-        lastMessageTime = now; // Запоминаем время отправки
-
+        lastMessageTime = now;
         if(hapticEnabled) tg.HapticFeedback.impactOccurred('light');
     };
 
-      function initChatSync() {
-        // ПРОВЕРЕННАЯ ЛОГИКА ОНЛАЙН
-    const onlineRef = db.ref('online_count');
-    
-    // Пытаемся взять реальный ID телеграма, если нет - генерируем временный
-    const myId = (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) 
-                 ? window.Telegram.WebApp.initDataUnsafe.user.id.toString() 
-                 : 'guest_' + Math.floor(Math.random() * 1000000);
+    function initChatSync() {
+        const onlineRef = db.ref('online_count');
+        const myId = (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) 
+                     ? window.Telegram.WebApp.initDataUnsafe.user.id.toString() 
+                     : 'guest_' + Math.floor(Math.random() * 1000000);
 
-    const myPresence = onlineRef.child(myId);
-    
-    // Записываем нас в сеть
-    myPresence.set(true);
-    
-    // Удаляем при выходе
-    myPresence.onDisconnect().remove();
+        const myPresence = onlineRef.child(myId);
+        myPresence.set(true);
+        myPresence.onDisconnect().remove();
 
-    // Слушаем изменения
-    onlineRef.on('value', (snap) => {
-        const count = snap.numChildren() || 0;
-        const onlineEl = document.getElementById('online-status');
-        if (onlineEl) onlineEl.innerText = `ONLINE: ${count}`;
-    });
+        onlineRef.on('value', (snap) => {
+            const count = snap.numChildren() || 0;
+            const onlineEl = document.getElementById('online-status');
+            if (onlineEl) onlineEl.innerText = `ONLINE: ${count}`;
+        });
 
         if(typeof db === 'undefined') return;
-        const ADMIN_ID = 5240434059; // !!! ЗАМЕНИ ЭТО ЧИСЛО НА СВОЙ ID ИЗ БОТА !!!
 
         db.ref('chat').limitToLast(20).on('value', (snap) => {
             const container = document.getElementById('chat-messages');
@@ -218,8 +196,6 @@ async function syncWithServer() {
             
             snap.forEach(child => {
                 const m = child.val();
-                const msgId = child.key; // Уникальный ID сообщения в базе
-                
                 let userRank = RANKS[0].name;
                 for (let i = RANKS.length - 1; i >= 0; i--) {
                     if ((m.balance || 0) >= RANKS[i].limit) {
@@ -229,28 +205,18 @@ async function syncWithServer() {
                 }
 
                 container.innerHTML += `
-    <div class="chat-msg" style="margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
-        <div style="display: flex; gap: 8px; align-items: center;">
-            <span style="font-size: 9px; color: #ffca28; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
-                ${userRank}
-            </span>
-            <span class="author" style="font-weight: bold; color: #ffffff; font-size: 14px;">
-                ${m.name}
-            </span>
-        </div>
-        <div class="text" style="display: block; margin-top: 3px; color: #e0e0e0; font-size: 14px;">
-            ${m.text}
-        </div>
-    </div>
-`;
+                    <div class="chat-msg" style="margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span style="font-size: 9px; color: #ffca28; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">${userRank}</span>
+                            <span class="author" style="font-weight: bold; color: #ffffff; font-size: 14px;">${m.name}</span>
+                        </div>
+                        <div class="text" style="display: block; margin-top: 3px; color: #e0e0e0; font-size: 14px;">${m.text}</div>
+                    </div>`;
             });
             container.scrollTop = container.scrollHeight;
         });
     }
 
-    // ==========================================
-    // СИСТЕМЫ ЗАЩИТЫ
-    // ==========================================
     const NexusShield = {
         execute: function(moduleName, task) {
             try { return task(); } catch (e) {
@@ -271,14 +237,11 @@ async function syncWithServer() {
             NexusShield.execute("Core_Balance", () => {
                 balance += amount;
                 if (balance < 0) balance = 0;
-
-                // Проверка на миллионный порог
                 let currentMillion = Math.floor(balance / 1000000);
                 if(currentMillion > millionMilestone) {
                     millionMilestone = currentMillion;
                     NexusEvent.log(`MILESTONE: ${currentMillion}M N REACHED!`, `ДОСТИЖЕНИЕ: ${currentMillion}М N СОБРАНО!`);
                 }
-
                 updateUI();
                 saveData();
             });
@@ -300,9 +263,7 @@ async function syncWithServer() {
                 const earned = diff * (upgrades.vpn.lvl * 2);
                 if (earned > 0) {
                     balance += earned;
-                    const msg = currentLang === 'RU' ? 
-                        `VPN намайнил: +${earned.toLocaleString()} N` : 
-                        `VPN mined: +${earned.toLocaleString()} N`;
+                    const msg = currentLang === 'RU' ? `VPN намайнил: +${earned.toLocaleString()} N` : `VPN mined: +${earned.toLocaleString()} N`;
                     tg.showAlert(msg);
                     NexusEvent.log(`Passive income: +${earned}`, `Пассивный доход: +${earned}`);
                 }
@@ -310,9 +271,6 @@ async function syncWithServer() {
         }
     };
 
-    // ==========================================
-    // ЯЗЫКОВЫЕ ПАКЕТЫ
-    // ==========================================
     const langMap = {
         EN: {
             mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
@@ -341,9 +299,6 @@ async function syncWithServer() {
         { name: "CYBER MINER", limit: 250000 }, { name: "NEXUS WHALE", limit: 1000000 }, { name: "LEGEND", limit: 5000000 }
     ];
 
-    // ==========================================
-    // UI (ОТРИСОВКА)
-    // ==========================================
     window.updateUI = function() { 
         updateRank();
         const L = langMap[currentLang];
@@ -353,7 +308,7 @@ async function syncWithServer() {
         document.getElementById('nav-mining').querySelector('span').innerText = L.mining;
         document.getElementById('nav-market').querySelector('span').innerText = L.market;
         document.getElementById('nav-tasks').querySelector('span').innerText = L.tasks;
-        document.getElementById('nav-chat-label').innerText = L.chatLabel; // ЧАТ В НАВИГАЦИИ
+        document.getElementById('nav-chat-label').innerText = L.chatLabel;
 
         document.getElementById('lbl-energy').innerText = L.energy;
         document.getElementById('lbl-sync').innerText = L.overdrive;
@@ -361,7 +316,7 @@ async function syncWithServer() {
         document.getElementById('m-market-title').innerText = L.market;
         document.getElementById('m-tasks-title').innerText = L.tasks;
         document.getElementById('m-rank-title').innerText = L.top;
-        document.getElementById('m-chat-title').innerText = L.chatTitle; // ЗАГОЛОВОК ЧАТА
+        document.getElementById('m-chat-title').innerText = L.chatTitle;
 
         document.getElementById('lbl-lang').innerText = L.lang;
         document.getElementById('lbl-haptic').innerText = L.haptic;
@@ -438,13 +393,9 @@ async function syncWithServer() {
                     <span class="card-price">${L.cost}: ${upgrades.vpn.cost.toLocaleString()} N</span>
                 </div>
                 <button class="nexus-btn-buy" onclick="buyItem('vpn')">${L.buy}</button>
-            </div>
-        `;
+            </div>`;
     }
 
-    // ==========================================
-    // ПЛАТЕЖИ И КРИПТО
-    // ==========================================
     window.buyWithUSDT = async function(type, price) {
         if (typeof tonConnectUI === 'undefined' || !tonConnectUI.account) {
             tg.showPopup({ message: currentLang === 'RU' ? 'Сначала подключите кошелек!' : 'Please connect your wallet first!' });
@@ -487,13 +438,17 @@ async function syncWithServer() {
                 let t = e.changedTouches[i];
                 let pwr = (upgrades.node.lvl * upgrades.node.power * currentMult) * (isOverdrive ? 5 : 1);
                 if (Math.random() < 0.01) pwr *= 10;
-                Core.modifyBalance(pwr); Core.consumeEnergy(2);
+                
+                Core.modifyBalance(pwr); 
+                Core.consumeEnergy(2);
+                
+                // ВАЖНО: Накапливаем клики для сервера
+                accumulatedClicks += pwr;
+
                 if (!isOverdrive && odCharge < 100) odCharge += 0.4;
                 createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
                 spawnParticles(t.clientX, t.clientY);
             }
-            // СИНХРОНИЗАЦИЯ С СЕРВЕРОМ (ДОБАВЛЕНО)
-            syncWithServer();
             if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
         }, {passive: false});
         touchZone.addEventListener('touchend', () => {
@@ -502,7 +457,7 @@ async function syncWithServer() {
     }
 
     // ==========================================
-    // ЗАДАНИЯ И ПРОВЕРКА
+    // ЗАДАНИЯ
     // ==========================================
     function renderTasks() {
         const L = langMap[currentLang];
@@ -525,21 +480,17 @@ async function syncWithServer() {
                     <span class="card-title">${L.refTask}</span>
                     <span class="card-sub">+5,000 N EACH</span> </div>
                 <button class="nexus-btn-buy" onclick="copyRefLink()">${L.refCopy}</button>
-            </div>
-        `;
+            </div>`;
 
-        // Внутри renderTasks() измени описание задачи
-const tasks = [
-    { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_protocol' },
-    // ИЗМЕНЕНО: теперь упор на пассивный доход
-    { id: 'invite', title: currentLang === 'RU' ? "СЕТЬ МАЙНЕРОВ (5 чел)" : "MINING NETWORK (5 ppl)", reward: 15000, url: 'auto' }, 
-    { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
-];
+        const tasks = [
+            { id: 'sub1', title: L.task1, reward: 5000, url: 'https://t.me/nexus_protocol' },
+            { id: 'invite', title: currentLang === 'RU' ? "СЕТЬ МАЙНЕРОВ (5 чел)" : "MINING NETWORK (5 ppl)", reward: 15000, url: 'auto' }, 
+            { id: 'reach100k', title: L.task3, reward: 25000, url: '' }
+        ];
 
         tasks.forEach(task => {
             const isDone = tasksDone.includes(task.id);
             let actionButtons = '';
-
             if (isDone) {
                 actionButtons = `<button class="nexus-btn-buy" disabled>${L.claimed}</button>`;
             } else if (task.id === 'invite') {
@@ -547,8 +498,7 @@ const tasks = [
             } else {
                 actionButtons = `
                     <button class="nexus-btn-buy" onclick="completeTask('${task.id}', ${task.reward}, '${task.url}')">${L.go}</button>
-                    <button class="nexus-btn-buy" style="background:#26a17b" id="check-${task.id}" onclick="verifyTask('${task.id}', ${task.reward})">${L.check}</button>
-                `;
+                    <button class="nexus-btn-buy" style="background:#26a17b" id="check-${task.id}" onclick="verifyTask('${task.id}', ${task.reward})">${L.check}</button>`;
             }
 
             grid.innerHTML += `<div class="card-nexus">
@@ -556,35 +506,24 @@ const tasks = [
                     <span class="card-title">${task.title}</span>
                     <span class="card-sub">+${task.reward.toLocaleString()} N</span>
                 </div>
-                <div style="display:flex; gap:5px;">
-                    ${actionButtons}
-                </div>
+                <div style="display:flex; gap:5px;">${actionButtons}</div>
             </div>`;
         });
     }
 
-        window.startAutoInviteTask = function() {
+    window.startAutoInviteTask = function() {
         copyRefLink();
-        const msg = currentLang === 'RU' 
-            ? "Ссылка скопирована! Когда 5 друзей зайдут, бонус и +10% дохода активируются автоматически." 
-            : "Link copied! Bonus and +10% income will activate when 5 friends join.";
+        const msg = currentLang === 'RU' ? "Ссылка скопирована!" : "Link copied!";
         tg.showAlert(msg);
         
         if (typeof db !== 'undefined' && user?.id) {
             const checkRef = setInterval(() => {
-                if (tasksDone.includes('invite')) {
-                    clearInterval(checkRef);
-                    return;
-                }
+                if (tasksDone.includes('invite')) { clearInterval(checkRef); return; }
                 db.ref('users/' + user.id + '/referrals_count').once('value', (snap) => {
                     const count = snap.val() || 0;
-                    if (count >= 5) {
-                        grantReward('invite', 15000); // Даем разовый бонус
-                        NexusEvent.log("Network Active: +50% Speed", "Сеть активна: Скорость +50%");
-                        clearInterval(checkRef);
-                    }
+                    if (count >= 5) { grantReward('invite', 15000); clearInterval(checkRef); }
                 });
-            }, 10000); // Проверка раз в 10 секунд
+            }, 10000);
         }
     };
 
@@ -617,7 +556,6 @@ const tasks = [
     function grantReward(id, reward) {
         if (!tasksDone.includes(id)) {
             balance += reward; tasksDone.push(id);
-            NexusEvent.log(`Task Complete: +${reward} N`, `Задание выполнено: +${reward} N`);
             saveData(); updateUI(); tg.showAlert(`+${reward} N!`);
         }
     }
@@ -627,18 +565,14 @@ const tasks = [
         if (now - lastDailyClaim < 86400000) return;
         const reward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
         balance += reward; lastDailyClaim = now; dailyStreak++;
-        NexusEvent.log(`Daily Bonus: +${reward} N`, `Ежедневный бонус: +${reward} N`);
         saveData(); updateUI(); tg.showAlert(`+${reward} N!`);
     };
 
     window.completeTask = function(id, reward, url) {
         if (!tasksDone.includes(id)) {
-            if (url && url !== '') {
-                if (url.includes('t.me')) {
-                    tg.openTelegramLink(url);
-                } else {
-                    window.open(url, '_blank');
-                }
+            if (url && url !== '' && url !== 'auto') {
+                if (url.includes('t.me')) tg.openTelegramLink(url);
+                else window.open(url, '_blank');
             }
             taskTimers[id] = Date.now();
             tg.showAlert(currentLang === 'RU' ? "Задание начато! Ожидание 15с." : "Started! Wait 15s.");
@@ -647,9 +581,7 @@ const tasks = [
 
     window.copyRefLink = function() {
         const link = `https://t.me/nexus_protocol_bot/app?startapp=${user?.id || '0'}`;
-        const text = currentLang === 'RU' 
-            ? "Присоединяйся к Nexus Mining Engine и начни майнить вместе со мной! 🚀" 
-            : "Join Nexus Mining Engine and start mining with me! 🚀";
+        const text = currentLang === 'RU' ? "Присоединяйся к Nexus Mining Engine! 🚀" : "Join Nexus Mining Engine! 🚀";
         const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
         tg.openTelegramLink(shareUrl);
     };
@@ -658,25 +590,18 @@ const tasks = [
     // СИСТЕМНЫЕ ФУНКЦИИ
     // ==========================================
     window.buyItem = function(type) {
-    let u = upgrades[type];
-    if (balance >= u.cost) {
-        balance -= u.cost; 
-        u.lvl++; 
-
-        // ИНДИВИДУАЛЬНЫЙ РОСТ ЦЕН
-        if (type === 'node') {
-            u.cost = Math.floor(u.cost * 2.0); // Цена ноды растет в 2 раза
-        } else if (type === 'vpn') {
-            u.cost = Math.floor(u.cost * 3.5); // Цена VPN растет в 3.5 раза
+        let u = upgrades[type];
+        if (balance >= u.cost) {
+            balance -= u.cost; 
+            u.lvl++; 
+            if (type === 'node') u.cost = Math.floor(u.cost * 2.0);
+            else if (type === 'vpn') u.cost = Math.floor(u.cost * 3.5);
+            NexusEvent.log(`${type.toUpperCase()} Upgraded`, `${type.toUpperCase()} Улучшен`);
+            saveData(); updateUI();
+        } else { 
+            tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!"); 
         }
-
-        NexusEvent.log(`${type.toUpperCase()} Upgraded to v.${u.lvl}`, `${type.toUpperCase()} Улучшен до v.${u.lvl}`);
-        saveData(); 
-        updateUI();
-    } else { 
-        tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!"); 
-    }
-};
+    };
 
     window.saveData = function() {
         localStorage.setItem('nexus_bal', balance);
@@ -689,11 +614,7 @@ const tasks = [
         localStorage.setItem('nexus_daily', lastDailyClaim);
         localStorage.setItem('nexus_streak', dailyStreak);
         if (typeof db !== 'undefined' && user?.id) {
-            db.ref('users/' + user.id).update({ 
-                balance: balance, 
-                v: GAME_VERSION, 
-                name: user.first_name 
-            });
+            db.ref('users/' + user.id).update({ balance: balance, v: GAME_VERSION, name: user.first_name });
         }
     };
 
@@ -729,7 +650,6 @@ const tasks = [
             m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
             if (id === 'rank-modal' && m.style.display === 'flex') loadLeaderboard();
             if (id === 'chat-modal' && m.style.display === 'flex') {
-                // Маленький хак для прокрутки чата вниз при открытии
                 setTimeout(() => {
                     const c = document.getElementById('chat-messages');
                     if(c) c.scrollTop = c.scrollHeight;
@@ -741,9 +661,6 @@ const tasks = [
     window.changeLanguage = function() { currentLang = currentLang === 'EN' ? 'RU' : 'EN'; localStorage.setItem('nx_lang', currentLang); updateUI(); };
     window.toggleHaptic = function() { hapticEnabled = !hapticEnabled; localStorage.setItem('nx_haptic', hapticEnabled?'on':'off'); updateUI(); };
 
-    // ==========================================
-    // ВИЗУАЛ
-    // ==========================================
     function createPop(x, y, v, isCrit) {
         const p = document.createElement('div'); p.className = 'floating-text';
         p.innerText = isCrit ? '+' + v + ' 🔥' : '+' + v;
@@ -764,7 +681,7 @@ const tasks = [
     window.activateOverdrive = function() {
         if (odCharge >= 100 && !isOverdrive) {
             isOverdrive = true;
-            NexusEvent.log("OVERDRIVE ENGAGED!", "ОВЕРДРАЙВ ЗАПУЩЕН!");
+            NexusEvent.log("OVERDRIVE!", "ОВЕРДРАЙВ!");
             let drain = setInterval(() => {
                 odCharge -= 2;
                 if (odCharge <= 0) { odCharge = 0; isOverdrive = false; clearInterval(drain); }
@@ -777,21 +694,12 @@ const tasks = [
         let rankIndex = 0;
         let rankName = RANKS[0].name;
         for (let i = RANKS.length-1; i>=0; i--) { 
-            if(balance >= RANKS[i].limit) { 
-                rankName = RANKS[i].name; 
-                rankIndex = i;
-                break; 
-            } 
+            if(balance >= RANKS[i].limit) { rankName = RANKS[i].name; rankIndex = i; break; } 
         }
-
-        if(rankIndex > lastRankIndex && lastRankIndex !== -1) {
-            NexusEvent.log(`New Rank: ${rankName}!`, `Новый ранг: ${rankName}!`);
-        }
+        if(rankIndex > lastRankIndex && lastRankIndex !== -1) NexusEvent.log(`New Rank: ${rankName}!`, `Новый ранг: ${rankName}!`);
         lastRankIndex = rankIndex;
-
         const rb = document.getElementById('rank-badge'); 
         if(rb) rb.innerText = `RANK: ${rankName}`;
-
         const coin = document.getElementById('coin-visual');
         if (coin) {
             const isPressed = coin.classList.contains('pressed');
@@ -801,19 +709,10 @@ const tasks = [
         }
     }
 
-        setInterval(() => {
-        // Базовый доход от твоего VPN
+    setInterval(() => {
         let currentIncome = (upgrades.vpn.lvl * 2) / 10;
-        
-        // --- НОВАЯ ЛОГИКА РЕФЕРАЛЬНОГО ДОХОДА ---
-        // Если задание на 5 друзей выполнено, добавляем +10% от их добычи
-        // (Предположим, что активный друг качает как ты. 5 друзей по 10% = +50% к твоему доходу)
-        if (tasksDone.includes('invite')) {
-            currentIncome *= 1.5; // Увеличиваем пассивный доход в 1.5 раза
-        }
-        
+        if (tasksDone.includes('invite')) currentIncome *= 1.5;
         balance += currentIncome;
-        
         const now = Date.now();
         const regenStep = (activeBoosts.speedEnd > now) ? 1.5 : 0.5;
         if (energy < 1000) energy = Math.min(1000, energy + regenStep);
@@ -827,21 +726,21 @@ const tasks = [
 
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
+        
+        // ЗАПУСК СИНХРОНИЗАЦИИ
         setInterval(syncWithServer, 5000);
+
         const sp = tg.initDataUnsafe?.start_param;
         if (sp && !refClaimed) {
             balance += 5000; refClaimed = true;
             localStorage.setItem('nexus_ref_claimed', 'true');
             tg.showAlert("+5,000 N!");
-            NexusEvent.log("Referral bonus +5k N", "Реферальный бонус +5к N");
         }
 
         Core.applyPassive(); 
-        initChatSync(); // Инициализация Firebase чата
-        // СИНХРОНИЗАЦИЯ ПРИ ЗАПУСКЕ (ДОБАВЛЕНО)
+        initChatSync(); 
         syncWithServer();
         updateUI(); 
-        
         NexusEvent.log("System Online.", "Система онлайн.");
     });
 
