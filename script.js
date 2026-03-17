@@ -34,10 +34,11 @@ window.deleteMsg = function(id) {
 const API_URL = "https://nexus-backend-9vim.onrender.com";
 
 async function syncWithServer() {
-    // Берем данные ТГ или ставим "заглушку" для тестов
+    console.log("Пытаюсь отправить данные на: " + API_URL + "/api/click"); // ДОБАВЬ ЭТО
     const user = window.Telegram?.WebApp?.initDataUnsafe?.user || { id: "5240434059", first_name: "Вася" };
     
     if (accumulatedClicks > 0) {
+        // ... остальной код
         try {
             const response = await fetch(`${API_URL}/api/click`, {
                 method: 'POST',
