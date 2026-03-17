@@ -83,9 +83,10 @@ window.deleteMsg = function(id) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userId: userId,
-                    initData: tg.initData
-                })
+    userId: user?.id || "unknown",
+    name: user?.first_name || "Игрок", // <-- Добавляем эту строку с запятой в конце
+    clicks: accumulatedClicks
+})
             });
             if (response.ok) {
                 const data = await response.json();
