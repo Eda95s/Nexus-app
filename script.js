@@ -29,6 +29,8 @@ window.deleteMsg = function(id) {
     const GAME_VERSION = "2.2.0_NEW_ECONOMY"; 
     const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o";
     const CHANNEL_ID = "-1002086386401";
+    // --- ДОБАВЛЕНО ДЛЯ СЕРВЕРА ---
+    const API_URL = "https://nexus-backend-9vim.onrender.com";
 
     // ==========================================
     // ИГРОВЫЕ ДАННЫЕ
@@ -72,6 +74,28 @@ window.deleteMsg = function(id) {
     let millionMilestone = Math.floor(balance / 1000000);
     let taskTimers = {};
     let lastMessageTime = 0; // Время последней отправки сообщения
+    const userId = user?.id || "unknown"; // ID для сервера
+
+    // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ (ДОБАВЛЕНО) ---
+    async function syncWithServer() {
+        try {
+            const response = await fetch(`${API_URL}/api/click`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: userId,
+                    initData: tg.initData
+                })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                balance = data.balance;
+                updateUI();
+            }
+        } catch (e) {
+            console.error("Sync error:", e);
+        }
+    }
 
     // ==========================================
     // НОВАЯ СИСТЕМА: EVENT LOG (МОНИТОР)
@@ -438,6 +462,8 @@ window.deleteMsg = function(id) {
                 createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
                 spawnParticles(t.clientX, t.clientY);
             }
+            // СИНХРОНИЗАЦИЯ С СЕРВЕРОМ (ДОБАВЛЕНО)
+            syncWithServer();
             if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
         }, {passive: false});
         touchZone.addEventListener('touchend', () => {
@@ -782,6 +808,8 @@ const tasks = [
 
         Core.applyPassive(); 
         initChatSync(); // Инициализация Firebase чата
+        // СИНХРОНИЗАЦИЯ ПРИ ЗАПУСКЕ (ДОБАВЛЕНО)
+        syncWithServer();
         updateUI(); 
         
         NexusEvent.log("System Online.", "Система онлайн.");
