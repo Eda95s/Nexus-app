@@ -44,10 +44,7 @@ async function checkServer() {
     }
 }
 checkServer();
-
-// Вызывай syncWithServer() каждые 5-10 секунд или при закрытии
-setInterval(syncWithServer, 5000);
-
+    
     // ==========================================
     // ИГРОВЫЕ ДАННЫЕ
     // ==========================================
@@ -64,6 +61,7 @@ setInterval(syncWithServer, 5000);
     const isWasReset = checkVersionReset();
     
     let balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
+    let accumulatedClicks = 0; // ОБЯЗАТЕЛЬНО
     let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
     let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
         node: { lvl: 1, cost: 45000, power: 1 },
@@ -829,7 +827,7 @@ const tasks = [
 
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
-        
+        setInterval(syncWithServer, 5000);
         const sp = tg.initDataUnsafe?.start_param;
         if (sp && !refClaimed) {
             balance += 5000; refClaimed = true;
