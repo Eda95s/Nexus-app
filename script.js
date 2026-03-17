@@ -31,7 +31,19 @@ window.deleteMsg = function(id) {
     const CHANNEL_ID = "-1002086386401";
     // --- ДОБАВЛЕНО ДЛЯ СЕРВЕРА ---
     // В самом верху файла проверь URL
-const API_URL = "https://nexus-backend-9vim.onrender.com";
+// Используем точный адрес, который сработал в браузере
+const API_URL = "https://nexus-backend-9vim.onrender.com".replace(/\/$/, ""); 
+
+// Добавим проверку связи при запуске
+async function checkServer() {
+    try {
+        const res = await fetch(`${API_URL}/api/leaders`);
+        if (res.ok) console.log("✅ СВЯЗЬ С СЕРВЕРОМ УСТАНОВЛЕНА");
+    } catch (e) {
+        console.error("❌ СЕРВЕР НЕ ОТВЕЧАЕТ. ПРОВЕРЬ API_URL");
+    }
+}
+checkServer();
 
 async function syncWithServer() {
     console.log("Пытаюсь отправить данные на: " + API_URL + "/api/click"); // ДОБАВЬ ЭТО
