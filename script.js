@@ -78,21 +78,19 @@ window.deleteMsg = function(id) {
 
     // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ (ДОБАВЛЕНО) ---
     async function saveData() {
-    // Возвращаем определение пользователя, которое ты удалил
-    const user = tg.initDataUnsafe?.user; 
-    
-    if (accumulatedClicks > 0) {
+    const user = tg.initDataUnsafe?.user;
+    if (accumulatedClicks > 0 && user) {
         try {
             await fetch(`${API_URL}/api/click`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userId: user?.id || "unknown",
-                    name: user?.first_name || "Игрок", // Теперь это сработает
+                    userId: user.id,
+                    name: user.first_name, // ОТПРАВЛЯЕМ ИМЯ
                     clicks: accumulatedClicks
                 })
             });
-            accumulatedClicks = 0; 
+            accumulatedClicks = 0;
         } catch (e) {
             console.error("Ошибка сохранения:", e);
         }
