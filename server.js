@@ -8,7 +8,7 @@ app.use(express.json());
 
 // Инициализация Firebase Admin (ключи мы добавим в переменные окружения на Render)
 admin.initializeApp({
-  credential: admin.credential.cert(require('./nexus-app-6769e-firebase-adminsdk-fbsvc-4d92dfda78.json')),
+  credential: admin.credential.cert(require('./serviceAccountKey.json')),
   databaseURL: "https://nexus-app-6769e-default-rtdb.europe-west1.firebasedatabase.app/"
 });
 
