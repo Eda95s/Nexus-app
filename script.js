@@ -77,32 +77,32 @@ window.deleteMsg = function(id) {
     const userId = user?.id || "unknown"; // ID для сервера
 
     // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ (ДОБАВЛЕНО) ---
-    async function saveData() {
+async function saveData() {
     const user = tg.initDataUnsafe?.user;
-    // Проверяем: есть ли юзер и были ли вообще клики
     if (user && accumulatedClicks > 0) {
+        const clicksToSend = accumulatedClicks;
         try {
             const response = await fetch(`${API_URL}/api/click`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId: user.id,
-                    name: user.first_name || "Player",
-                    clicks: accumulatedClicks // Отправляем накопленные клики
+                    name: user.first_name,
+                    clicks: clicksToSend
                 })
             });
 
             if (response.ok) {
-                // Если сервер ответил "ОК", только тогда обнуляем клики в телефоне
-                accumulatedClicks = 0;
-                console.log("Сохранено на сервере!");
+                const data = await response.json();
+                accumulatedClicks -= clicksToSend; // Вычитаем только то, что отправили
+                balance = data.balance; // Берем реальный баланс из базы
+                updateUI();
             }
         } catch (e) {
-            console.error("Сервер не ответил, клики остались в телефоне:", e);
+            console.error("Сервер спит, попробуем позже");
         }
     }
 }
-
     // ==========================================
     // НОВАЯ СИСТЕМА: EVENT LOG (МОНИТОР)
     // ==========================================
