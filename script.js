@@ -48,8 +48,8 @@ window.deleteMsg = function(id) {
     let balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
     let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
     let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
-        node: { lvl: 1, cost: 1000, power: 1 },
-        vpn: { lvl: 0, cost: 3240, income: 1 }
+        node: { lvl: 1, cost: 45000, power: 1 },
+        vpn: { lvl: 0, cost: 50000, income: 1 }
     };
 
     let activeBoosts = JSON.parse(localStorage.getItem('nexus_active_boosts')) || {
@@ -602,13 +602,25 @@ const tasks = [
     // СИСТЕМНЫЕ ФУНКЦИИ
     // ==========================================
     window.buyItem = function(type) {
-        let u = upgrades[type];
-        if (balance >= u.cost) {
-            balance -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.7);
-            NexusEvent.log(`${type.toUpperCase()} Upgraded to v.${u.lvl}`, `${type.toUpperCase()} Улучшен до v.${u.lvl}`);
-            saveData(); updateUI();
-        } else { tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!"); }
-    };
+    let u = upgrades[type];
+    if (balance >= u.cost) {
+        balance -= u.cost; 
+        u.lvl++; 
+
+        // ИНДИВИДУАЛЬНЫЙ РОСТ ЦЕН
+        if (type === 'node') {
+            u.cost = Math.floor(u.cost * 2.0); // Цена ноды растет в 2 раза
+        } else if (type === 'vpn') {
+            u.cost = Math.floor(u.cost * 3.5); // Цена VPN растет в 3.5 раза
+        }
+
+        NexusEvent.log(`${type.toUpperCase()} Upgraded to v.${u.lvl}`, `${type.toUpperCase()} Улучшен до v.${u.lvl}`);
+        saveData(); 
+        updateUI();
+    } else { 
+        tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!"); 
+    }
+};
 
     window.saveData = function() {
         localStorage.setItem('nexus_bal', balance);
