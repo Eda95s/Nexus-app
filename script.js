@@ -26,7 +26,7 @@ window.deleteMsg = function(id) {
     // ==========================================
     // КОНФИГУРАЦИЯ
     // ==========================================
-    const GAME_VERSION = "2.1.0_S2_FULL_SECURE"; 
+    const GAME_VERSION = "2.2.0_NEW_ECONOMY"; 
     const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o";
     const CHANNEL_ID = "-1002086386401";
 
