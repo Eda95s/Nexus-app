@@ -299,6 +299,41 @@ window.deleteMsg = function(id) {
         { name: "CYBER MINER", limit: 250000 }, { name: "NEXUS WHALE", limit: 1000000 }, { name: "LEGEND", limit: 5000000 }
     ];
 
+    // ФУНКЦИЯ ОБНОВЛЕНИЯ ПЕРЕВОДА ROADMAP
+    function updateRoadmapLanguage(lang) {
+        const translations = {
+            'RU': {
+                'm-roadmap-title': 'ПЛАН РАЗВИТИЯ NEXUS',
+                'step1-h': 'ЭТАП 1: ФУНДАМЕНТ',
+                'step1-p': 'Запуск движка майнинга, интеграция ASIC Z15 Pro и синхронизация данных.',
+                'step2-h': 'ЭТАП 2: ТОКЕНИЗАЦИЯ',
+                'step2-p': 'Смарт-контракт TON, рефералы 2.0 и альфа-протокол Smart Mining.',
+                'step3-h': 'ЭТАП 3: VPN И УТИЛИТЫ',
+                'step3-p': 'Запуск Nexus VPN, оплата в токенах NEX и RWA стейкинг.',
+                'step4-h': 'ЭТАП 4: ЭКОСИСТЕМА',
+                'step4-p': 'Листинги на биржах, масштабирование DePIN и публичный API.',
+                'm-roadmap-close': 'ЗАКРЫТЬ'
+            },
+            'EN': {
+                'm-roadmap-title': 'NEXUS ROADMAP',
+                'step1-h': 'PHASE 1: FOUNDATION',
+                'step1-p': 'Mining Engine launch, Z15 Pro ASIC integration, and real-time data sync.',
+                'step2-h': 'PHASE 2: TOKENIZATION',
+                'step2-p': 'TON Smart Contract, Referral 2.0, and Smart Mining Protocol alpha.',
+                'step3-h': 'PHASE 3: VPN & UTILITY',
+                'step3-p': 'Nexus VPN launch, NEX token payments, and RWA staking.',
+                'step4-h': 'PHASE 4: ECOSYSTEM',
+                'step4-p': 'DEX/CEX Listings, DePIN scaling, and Public API.',
+                'm-roadmap-close': 'CLOSE'
+            }
+        };
+        const t = translations[lang];
+        for (let id in t) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = t[id];
+        }
+    }
+
     window.updateUI = function() { 
         updateRank();
         const L = langMap[currentLang];
@@ -344,6 +379,8 @@ window.deleteMsg = function(id) {
         else btn.innerText = `${L.loading} ${Math.floor(odCharge)}%`;
         btn.className = `sync-btn ${odCharge >= 100 ? 'ready' : ''} ${isOverdrive ? 'active' : ''}`;
 
+        // Вызываем обновление Roadmap при обновлении UI
+        updateRoadmapLanguage(currentLang);
         renderMarket();
         renderTasks();
     };
@@ -658,9 +695,14 @@ window.deleteMsg = function(id) {
         }
     };
 
-    window.changeLanguage = function() { currentLang = currentLang === 'EN' ? 'RU' : 'EN'; localStorage.setItem('nx_lang', currentLang); updateUI(); };
+    window.changeLanguage = function() { 
+        currentLang = currentLang === 'EN' ? 'RU' : 'EN'; 
+        localStorage.setItem('nx_lang', currentLang); 
+        updateUI(); 
+    };
+    
     window.toggleHaptic = function() { hapticEnabled = !hapticEnabled; localStorage.setItem('nx_haptic', hapticEnabled?'on':'off'); updateUI(); };
-
+    
     function createPop(x, y, v, isCrit) {
         const p = document.createElement('div'); p.className = 'floating-text';
         p.innerText = isCrit ? '+' + v + ' 🔥' : '+' + v;
