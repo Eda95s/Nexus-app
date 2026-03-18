@@ -66,8 +66,66 @@
               });
           });
       }
+
+      // ФУНКЦИЯ ПЕРЕВОДА ROADMAP
+      function updateRoadmapLanguage(lang) {
+          const translations = {
+              'RU': {
+                  'm-roadmap-title': 'ПЛАН РАЗВИТИЯ NEXUS',
+                  'step1-h': 'ЭТАП 1: ФУНДАМЕНТ',
+                  'step1-p': 'Запуск движка майнинга, интеграция ASIC Z15 Pro и синхронизация данных.',
+                  'step2-h': 'ЭТАП 2: ТОКЕНИЗАЦИЯ',
+                  'step2-p': 'Смарт-контракт TON, рефералы 2.0 и альфа-протокол Smart Mining.',
+                  'step3-h': 'ЭТАП 3: VPN И УТИЛИТЫ',
+                  'step3-p': 'Запуск Nexus VPN, оплата в токенах NEX и RWA стейкинг.',
+                  'step4-h': 'ЭТАП 4: ЭКОСИСТЕМА',
+                  'step4-p': 'Листинги на биржах, масштабирование DePIN и публичный API.',
+                  'm-roadmap-close': 'ЗАКРЫТЬ'
+              },
+              'EN': {
+                  'm-roadmap-title': 'NEXUS ROADMAP',
+                  'step1-h': 'PHASE 1: FOUNDATION',
+                  'step1-p': 'Mining Engine launch, Z15 Pro ASIC integration, and real-time data sync.',
+                  'step2-h': 'PHASE 2: TOKENIZATION',
+                  'step2-p': 'TON Smart Contract, Referral 2.0, and Smart Mining Protocol alpha.',
+                  'step3-h': 'PHASE 3: VPN & UTILITY',
+                  'step3-p': 'Nexus VPN launch, NEX token payments, and RWA staking.',
+                  'step4-h': 'PHASE 4: ECOSYSTEM',
+                  'step4-p': 'DEX/CEX Listings, DePIN scaling, and Public API.',
+                  'm-roadmap-close': 'CLOSE'
+              }
+          };
+
+          const t = translations[lang];
+          for (let id in t) {
+              const el = document.getElementById(id);
+              if (el) el.innerText = t[id];
+          }
+      }
+
+      // Глобальный перехват смены языка (если функция в script.js, она должна вызывать эту)
+      window.addEventListener('storage', (e) => {
+          if (e.key === 'nx_lang') updateRoadmapLanguage(e.newValue);
+      });
     </script>
     <style>
+        /* Оптимизация верхних кнопок, чтобы не загораживали кошелек */
+        .top-controls {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            gap: 8px;
+        }
+        .control-btn {
+            width: 38px !important;
+            height: 38px !important;
+            flex-shrink: 0;
+        }
+        .control-btn svg {
+            width: 18px !important;
+            height: 18px !important;
+        }
+
         #floating-donate {
             position: fixed; bottom: 85px; right: 15px; width: 60px; height: 60px;
             background: linear-gradient(135deg, #26a17b 0%, #1d7e61 100%); 
@@ -86,10 +144,9 @@
             margin-bottom: 15px; color: #00f2ff;
         }
 
-        /* --- ВНЕДРЕНИЕ: Event Log Monitor --- */
         .event-monitor {
             position: absolute;
-            bottom: 270px; /* Над UI барами */
+            bottom: 270px; 
             width: 85%;
             height: 60px;
             background: rgba(0, 212, 255, 0.03);
@@ -116,7 +173,6 @@
             to { transform: translateX(0); opacity: 0.8; }
         }
 
-        /* --- ВНЕДРЕНИЕ: Chat Interface Styles --- */
         .chat-container { display: flex; flex-direction: column; height: 100%; }
         .chat-messages { flex-grow: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         .chat-msg { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; border-left: 3px solid var(--cyan); }
@@ -124,6 +180,10 @@
         .chat-msg .text { font-size: 0.75rem; color: #fff; }
         .chat-input-area { display: flex; gap: 10px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); }
         .nexus-input { background: rgba(0,0,0,0.3); border: 1px solid var(--cyan); border-radius: 8px; color: #fff; padding: 10px; flex-grow: 1; font-family: 'Orbitron'; font-size: 0.7rem; }
+        
+        .roadmap-step { border-left: 2px solid #555; padding-left: 15px; margin-bottom: 20px; text-align: left; }
+        .step-done { border-left-color: #22c55e; }
+        .step-active { border-left-color: #00d4ff; }
     </style>
 </head>
 <body>
@@ -144,6 +204,12 @@
                     <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
                     <path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path>
                     <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4-h-4z"></path>
+                </svg>
+            </div>
+
+            <div class="control-btn" onclick="toggleModal('roadmap-modal')" style="border-color: #f1c40f; color: #f1c40f;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M7 16l-4-4 4-4M3 12h18M17 8l4 4-4 4"></path>
                 </svg>
             </div>
 
@@ -184,6 +250,31 @@
                 <div class="bar-bg"><div id="boost-fill" class="fill-cyan"></div></div>
             </div>
             <div id="od-btn" class="sync-btn" onclick="activateOverdrive()">LOADING 0%</div>
+        </div>
+
+        <div id="roadmap-modal" class="modal-overlay">
+            <div class="modal-content full-modal">
+                <h2 id="m-roadmap-title" style="color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.3);">NEXUS ROADMAP</h2>
+                <div style="padding: 10px; overflow-y: auto; max-height: 350px;">
+                    <div class="roadmap-step step-done">
+                        <h3 id="step1-h" style="color: #22c55e; font-size: 0.9rem;">PHASE 1: FOUNDATION</h3>
+                        <p id="step1-p" style="font-size: 0.7rem; color: #ccc;">Mining Engine launch, Z15 Pro ASIC integration, and real-time data sync.</p>
+                    </div>
+                    <div class="roadmap-step step-active">
+                        <h3 id="step2-h" style="color: #00d4ff; font-size: 0.9rem;">PHASE 2: TOKENIZATION</h3>
+                        <p id="step2-p" style="font-size: 0.7rem; color: #ccc;">TON Smart Contract, Referral 2.0, and Smart Mining Protocol alpha.</p>
+                    </div>
+                    <div class="roadmap-step" style="opacity: 0.6;">
+                        <h3 id="step3-h" style="color: #aaa; font-size: 0.9rem;">PHASE 3: VPN & UTILITY</h3>
+                        <p id="step3-p" style="font-size: 0.7rem; color: #888;">Nexus VPN launch, NEX token payments, and RWA staking.</p>
+                    </div>
+                    <div class="roadmap-step" style="opacity: 0.4;">
+                        <h3 id="step4-h" style="color: #888; font-size: 0.9rem;">PHASE 4: ECOSYSTEM</h3>
+                        <p id="step4-p" style="font-size: 0.7rem; color: #666;">DEX/CEX Listings, DePIN scaling, and Public API.</p>
+                    </div>
+                </div>
+                <button id="m-roadmap-close" class="close-btn-nexus" onclick="toggleModal('roadmap-modal')">CLOSE</button>
+            </div>
         </div>
 
         <div id="donate-modal" class="modal-overlay">
