@@ -764,7 +764,7 @@ window.deleteMsg = function(id) {
         updateUI();
     }, 100);
 
-    setInterval(saveData, 10000); 
+    setInterval(saveData, 5000); 
 
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
