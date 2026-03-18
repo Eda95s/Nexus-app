@@ -9,24 +9,26 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 
 .metal-background { width: 100%; height: 100vh; background: radial-gradient(circle at center, #0a162f 0%, #000 100%); display: flex; flex-direction: column; align-items: center; }
 
-/* Кнопки управления */
+/* Кнопки управления — ИСПРАВЛЕНО (Теперь не перекрывают друг друга) */
 .top-controls { 
     position: absolute; 
     top: 25px; 
     left: 0;
     right: 0;
     display: flex;
-    justify-content: space-between; 
+    justify-content: space-around; /* Кнопки теперь распределены равномерно */
+    align-items: center;
     padding: 0 20px;
     width: 100%;
     box-sizing: border-box;
     z-index: 100;
 }
 
+/* Убрали абсолютное позиционирование для второй кнопки */
 .top-controls .control-btn:nth-child(2) {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    position: relative;
+    left: auto;
+    transform: none;
 }
 
 .control-btn {
