@@ -623,6 +623,32 @@ window.deleteMsg = function(id) {
         tg.openTelegramLink(shareUrl);
     };
 
+    window.openVpnApp = function() {
+    const tg = window.Telegram.WebApp;
+    const user = tg.initDataUnsafe?.user;
+
+    if (user) {
+        const id = user.id;
+        const name = encodeURIComponent(user.first_name || "User");
+        // Эта ссылка совпадает с тем, что мы прописали в Манифесте Android
+        const deepLink = `nexflow://auth?id=${id}&name=${name}`;
+        
+        if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+
+        // Попытка открыть приложение
+        window.location.assign(deepLink);
+
+        // Резервный вариант: если через 2 секунды мы все еще в кликере, 
+        // значит приложение не установлено. Предлагаем скачать.
+        setTimeout(() => {
+            tg.showConfirm(currentLang === 'RU' ? "Приложение NexFlow не найдено. Скачать APK?" : "NexFlow app not found. Download APK?", (ok) => {
+                if (ok) {
+                    tg.openLink("https://nexus-app-6769e.web.app/app-fdroid-universal-debug.apk");
+                }
+            });
+        }, 2000);
+    }
+};
     // ==========================================
     // СИСТЕМНЫЕ ФУНКЦИИ
     // ==========================================
