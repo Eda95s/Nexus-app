@@ -23,23 +23,25 @@ window.deleteMsg = function(id) {
     tg.expand();
     const user = tg.initDataUnsafe?.user;
 
+   // ==========================================
+    // КОНФИГУРАЦИЯ (ОБНОВЛЕНО ПОД FIREBASE)
     // ==========================================
-    // КОНФИГУРАЦИЯ
-    // ==========================================
-    const GAME_VERSION = "2.2.0_NEW_ECONOMY"; 
+    const GAME_VERSION = "2.2.0_FIREBASE_ONLY"; 
     const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o";
     const CHANNEL_ID = "-1002086386401";
-    const API_URL = "https://nexus-backend-9vim.onrender.com".replace(/\/$/, ""); 
 
-    async function checkServer() {
-        try {
-            const res = await fetch(`${API_URL}/api/leaders`);
-            if (res.ok) console.log("✅ СВЯЗЬ С СЕРВЕРОМ УСТАНОВЛЕНА");
-        } catch (e) {
-            console.error("❌ СЕРВЕР НЕ ОТВЕЧАЕТ. ПРОВЕРЬ API_URL");
-        }
+    // Проверка связи с Firebase вместо Render
+    function checkFirebase() {
+        const connectedRef = firebase.database().ref(".info/connected");
+        connectedRef.on("value", (snap) => {
+            if (snap.val() === true) {
+                console.log("✅ СВЯЗЬ С FIREBASE УСТАНОВЛЕНА");
+            } else {
+                console.error("❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ FIREBASE");
+            }
+        });
     }
-    checkServer();
+    checkFirebase();
     
     // ==========================================
     // ИГРОВЫЕ ДАННЫЕ
