@@ -106,9 +106,11 @@ window.deleteMsg = function(id) {
 
                 if (response.ok) {
                     const data = await response.json();
+                    // Синхронизируем баланс с сервером
                     balance = data.balance;
-                    accumulatedClicks = 0;
+                    accumulatedClicks = 0; // Сбрасываем накопленные клики только после успеха
                     updateUI();
+                    saveData();
                 } else {
                     console.error("Сервер ответил ошибкой:", response.status);
                 }
@@ -117,6 +119,9 @@ window.deleteMsg = function(id) {
             }
         }
     }
+
+    // Запускаем синхронизацию каждые 10 секунд
+    setInterval(syncWithServer, 10000);
 
     // ==========================================
     // НОВАЯ СИСТЕМА: EVENT LOG
@@ -172,6 +177,8 @@ window.deleteMsg = function(id) {
     };
 
     function initChatSync() {
+        if(typeof db === 'undefined') return;
+        
         const onlineRef = db.ref('online_count');
         const myId = (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) 
                      ? window.Telegram.WebApp.initDataUnsafe.user.id.toString() 
@@ -186,8 +193,6 @@ window.deleteMsg = function(id) {
             const onlineEl = document.getElementById('online-status');
             if (onlineEl) onlineEl.innerText = `ONLINE: ${count}`;
         });
-
-        if(typeof db === 'undefined') return;
 
         db.ref('chat').limitToLast(20).on('value', (snap) => {
             const container = document.getElementById('chat-messages');
@@ -299,7 +304,21 @@ window.deleteMsg = function(id) {
         { name: "CYBER MINER", limit: 250000 }, { name: "NEXUS WHALE", limit: 1000000 }, { name: "LEGEND", limit: 5000000 }
     ];
 
-    // ФУНКЦИЯ ОБНОВЛЕНИЯ ПЕРЕВОДА ROADMAP
+    function updateRank() {
+        let index = 0;
+        for (let i = RANKS.length - 1; i >= 0; i--) {
+            if (balance >= RANKS[i].limit) {
+                index = i;
+                break;
+            }
+        }
+        if (index !== lastRankIndex) {
+            lastRankIndex = index;
+            const rankEl = document.getElementById('user-rank');
+            if (rankEl) rankEl.innerText = RANKS[index].name;
+        }
+    }
+
     function updateRoadmapLanguage(lang) {
         const translations = {
             'RU': {
@@ -379,7 +398,6 @@ window.deleteMsg = function(id) {
         else btn.innerText = `${L.loading} ${Math.floor(odCharge)}%`;
         btn.className = `sync-btn ${odCharge >= 100 ? 'ready' : ''} ${isOverdrive ? 'active' : ''}`;
 
-        // Вызываем обновление Roadmap при обновлении UI
         updateRoadmapLanguage(currentLang);
         renderMarket();
         renderTasks();
@@ -473,18 +491,18 @@ window.deleteMsg = function(id) {
             const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 let t = e.changedTouches[i];
-                let pwr = (upgrades.node.lvl * upgrades.node.power * currentMult) * (isOverdrive ? 5 : 1);
+                let pwr = (upgrades.node.lvl * currentMult) * (isOverdrive ? 5 : 1);
                 if (Math.random() < 0.01) pwr *= 10;
                 
                 Core.modifyBalance(pwr); 
                 Core.consumeEnergy(2);
                 
-                // ВАЖНО: Накапливаем клики для сервера
+                // Накапливаем клики для сервера
                 accumulatedClicks += pwr;
 
                 if (!isOverdrive && odCharge < 100) odCharge += 0.4;
-                createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
-                spawnParticles(t.clientX, t.clientY);
+                if (typeof createPop === 'function') createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
+                if (typeof spawnParticles === 'function') spawnParticles(t.clientX, t.clientY);
             }
             if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
         }, {passive: false});
@@ -624,31 +642,25 @@ window.deleteMsg = function(id) {
     };
 
     window.openVpnApp = function() {
-    const tg = window.Telegram.WebApp;
-    const user = tg.initDataUnsafe?.user;
+        if (user) {
+            const id = user.id;
+            const name = encodeURIComponent(user.first_name || "User");
+            const deepLink = `nexflow://auth?id=${id}&name=${name}`;
+            
+            if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
 
-    if (user) {
-        const id = user.id;
-        const name = encodeURIComponent(user.first_name || "User");
-        // Эта ссылка совпадает с тем, что мы прописали в Манифесте Android
-        const deepLink = `nexflow://auth?id=${id}&name=${name}`;
-        
-        if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+            window.location.assign(deepLink);
 
-        // Попытка открыть приложение
-        window.location.assign(deepLink);
+            setTimeout(() => {
+                tg.showConfirm(currentLang === 'RU' ? "Приложение NexFlow не найдено. Скачать APK?" : "NexFlow app not found. Download APK?", (ok) => {
+                    if (ok) {
+                        tg.openLink("https://nexus-app-6769e.web.app/app-fdroid-universal-debug.apk");
+                    }
+                });
+            }, 2000);
+        }
+    };
 
-        // Резервный вариант: если через 2 секунды мы все еще в кликере, 
-        // значит приложение не установлено. Предлагаем скачать.
-        setTimeout(() => {
-            tg.showConfirm(currentLang === 'RU' ? "Приложение NexFlow не найдено. Скачать APK?" : "NexFlow app not found. Download APK?", (ok) => {
-                if (ok) {
-                    tg.openLink("https://nexus-app-6769e.web.app/app-fdroid-universal-debug.apk");
-                }
-            });
-        }, 2000);
-    }
-};
     // ==========================================
     // СИСТЕМНЫЕ ФУНКЦИИ
     // ==========================================
@@ -694,122 +706,27 @@ window.deleteMsg = function(id) {
 
     function renderLeaderboard(players) {
         const container = document.getElementById('leaderboard-list');
-        if (!container) return; container.innerHTML = "";
-        players.forEach((p, i) => {
-            const div = document.createElement('div'); div.className = 'card-nexus';
-            div.style.marginBottom = "5px";
-            div.innerHTML = `<div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                <span style="color:#00f2ff; font-weight:bold;">#${i+1}</span>
-                <span style="flex-grow:1; margin-left:10px;">${(p.name || 'ANON').toUpperCase()}</span>
-                <span style="font-weight:bold;">${Math.floor(p.balance).toLocaleString()} N</span>
-            </div>`;
-            container.appendChild(div);
-        });
+        if (!container) return;
+        container.innerHTML = players.map((p, i) => `
+            <div class="leader-item">
+                <span>#${i+1} ${p.name || 'Anon'}</span>
+                <span>${Math.floor(p.balance || 0).toLocaleString()} N</span>
+            </div>
+        `).join('');
     }
 
-    window.toggleModal = function(id) {
-        const m = document.getElementById(id);
-        if(m) {
-            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-            if (id === 'rank-modal' && m.style.display === 'flex') loadLeaderboard();
-            if (id === 'chat-modal' && m.style.display === 'flex') {
-                setTimeout(() => {
-                    const c = document.getElementById('chat-messages');
-                    if(c) c.scrollTop = c.scrollHeight;
-                }, 100);
-            }
-        }
-    };
-
-    window.changeLanguage = function() { 
-        currentLang = currentLang === 'EN' ? 'RU' : 'EN'; 
-        localStorage.setItem('nx_lang', currentLang); 
-        updateUI(); 
-    };
+    // Инициализация
+    Core.applyPassive();
+    initChatSync();
+    updateUI();
     
-    window.toggleHaptic = function() { hapticEnabled = !hapticEnabled; localStorage.setItem('nx_haptic', hapticEnabled?'on':'off'); updateUI(); };
-    
-    function createPop(x, y, v, isCrit) {
-        const p = document.createElement('div'); p.className = 'floating-text';
-        p.innerText = isCrit ? '+' + v + ' 🔥' : '+' + v;
-        p.style.left = x + 'px'; p.style.top = y + 'px';
-        document.body.appendChild(p); setTimeout(() => p.remove(), 600);
-    }
-
-    function spawnParticles(x, y) {
-        for (let i = 0; i < 6; i++) {
-            const p = document.createElement('div'); p.className = 'particle';
-            p.style.left = x + 'px'; p.style.top = y + 'px';
-            const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 40;
-            p.animate([{ opacity: 1 }, { transform: `translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity: 0 }], 500);
-            document.body.appendChild(p); setTimeout(() => p.remove(), 500);
-        }
-    }
-
-    window.activateOverdrive = function() {
-        if (odCharge >= 100 && !isOverdrive) {
-            isOverdrive = true;
-            NexusEvent.log("OVERDRIVE!", "ОВЕРДРАЙВ!");
-            let drain = setInterval(() => {
-                odCharge -= 2;
-                if (odCharge <= 0) { odCharge = 0; isOverdrive = false; clearInterval(drain); }
-                updateUI();
-            }, 100);
-        }
-    };
-
-    function updateRank() {
-        let rankIndex = 0;
-        let rankName = RANKS[0].name;
-        for (let i = RANKS.length-1; i>=0; i--) { 
-            if(balance >= RANKS[i].limit) { rankName = RANKS[i].name; rankIndex = i; break; } 
-        }
-        if(rankIndex > lastRankIndex && lastRankIndex !== -1) NexusEvent.log(`New Rank: ${rankName}!`, `Новый ранг: ${rankName}!`);
-        lastRankIndex = rankIndex;
-        const rb = document.getElementById('rank-badge'); 
-        if(rb) rb.innerText = `RANK: ${rankName}`;
-        const coin = document.getElementById('coin-visual');
-        if (coin) {
-            const isPressed = coin.classList.contains('pressed');
-            coin.className = 'nexus-button'; 
-            coin.classList.add(`rank-${rankIndex}`); 
-            if (isPressed) coin.classList.add('pressed');
-        }
-    }
-
+    // Регенерация энергии
     setInterval(() => {
-        let currentIncome = (upgrades.vpn.lvl * 2) / 10;
-        if (tasksDone.includes('invite')) currentIncome *= 1.5;
-        balance += currentIncome;
-        const now = Date.now();
-        const regenStep = (activeBoosts.speedEnd > now) ? 1.5 : 0.5;
-        if (energy < 1000) energy = Math.min(1000, energy + regenStep);
-        if (!isOverdrive && odCharge > 0 && (now - NexusGuard.lastClickTime > 2000)) {
-            odCharge = Math.max(0, odCharge - 0.3);
+        const regenMult = (activeBoosts.speedEnd > Date.now()) ? 10 : 5;
+        if (energy < 1000) {
+            energy = Math.min(1000, energy + regenMult);
+            updateUI();
         }
-        updateUI();
-    }, 100);
-
-    setInterval(saveData, 5000); 
-
-    document.addEventListener('DOMContentLoaded', () => { 
-        if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
-        
-        // ЗАПУСК СИНХРОНИЗАЦИИ
-        setInterval(syncWithServer, 5000);
-
-        const sp = tg.initDataUnsafe?.start_param;
-        if (sp && !refClaimed) {
-            balance += 5000; refClaimed = true;
-            localStorage.setItem('nexus_ref_claimed', 'true');
-            tg.showAlert("+5,000 N!");
-        }
-
-        Core.applyPassive(); 
-        initChatSync(); 
-        syncWithServer();
-        updateUI(); 
-        NexusEvent.log("System Online.", "Система онлайн.");
-    });
+    }, 1000);
 
 })();
