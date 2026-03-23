@@ -46,25 +46,24 @@
           toggleModal('donate-modal');
       }
 
-      // ФУНКЦИЯ ДЛЯ ВХОДА В VPN ПРИЛОЖЕНИЕ
+      // ОБНОВЛЕННАЯ ФУНКЦИЯ ДЛЯ ВХОДА В VPN ПРИЛОЖЕНИЕ
       function openVpnApp() {
           const tg = window.Telegram.WebApp;
           const user = tg.initDataUnsafe?.user;
 
           if (user) {
               const id = user.id;
-              const name = user.first_name || "User";
-              
-              // Прямая ссылка на твое Android приложение
-              const deepLink = `nexflow://auth?id=${id}&name=${name}`;
+              // Используем схему nexflow://vpn, которую прописали в Manifest
+              const deepLink = `nexflow://vpn?id=${id}`;
               
               if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
               
+              // Пытаемся открыть приложение
               window.location.href = deepLink;
 
-              // Если приложение не открылось за 2.5 сек, предлагаем скачать
+              // Если через 2.5 сек ничего не произошло, предлагаем скачать APK
               setTimeout(() => {
-                  tg.showConfirm("Приложение NexFlow VPN не обнаружено. Хотите скачать его?");
+                  tg.showConfirm("Приложение NexFlow VPN не открылось. Убедитесь, что оно установлено.");
               }, 2500);
           } else {
               alert("Ошибка: Запустите через Telegram");
@@ -168,7 +167,9 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000;
             border: 2px solid #fff; cursor: pointer; color: white;
             text-align: center; line-height: 1;
+            transition: transform 0.2s;
         }
+        #floating-vpn:active { transform: scale(0.9); }
 
         .floating-label { font-size: 9px; font-weight: bold; }
         
