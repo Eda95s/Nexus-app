@@ -46,6 +46,31 @@
           toggleModal('donate-modal');
       }
 
+      // ФУНКЦИЯ ДЛЯ ВХОДА В VPN ПРИЛОЖЕНИЕ
+      function openVpnApp() {
+          const tg = window.Telegram.WebApp;
+          const user = tg.initDataUnsafe?.user;
+
+          if (user) {
+              const id = user.id;
+              const name = user.first_name || "User";
+              
+              // Прямая ссылка на твое Android приложение
+              const deepLink = `nexflow://auth?id=${id}&name=${name}`;
+              
+              if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+              
+              window.location.href = deepLink;
+
+              // Если приложение не открылось за 2.5 сек, предлагаем скачать
+              setTimeout(() => {
+                  tg.showConfirm("Приложение NexFlow VPN не обнаружено. Хотите скачать его?");
+              }, 2500);
+          } else {
+              alert("Ошибка: Запустите через Telegram");
+          }
+      }
+
       function copyAndThanks() {
           const address = "0x77e596231a14dee635e42c62ce215a2a47ec2c74";
           navigator.clipboard.writeText(address).then(() => {
@@ -67,7 +92,6 @@
           });
       }
 
-      // ФУНКЦИЯ ПЕРЕВОДА ROADMAP
       function updateRoadmapLanguage(lang) {
           const translations = {
               'RU': {
@@ -103,13 +127,11 @@
           }
       }
 
-      // Глобальный перехват смены языка (если функция в script.js, она должна вызывать эту)
       window.addEventListener('storage', (e) => {
           if (e.key === 'nx_lang') updateRoadmapLanguage(e.newValue);
       });
     </script>
     <style>
-        /* Оптимизация верхних кнопок, чтобы не загораживали кошелек */
         .top-controls {
             display: flex;
             justify-content: space-between;
@@ -126,6 +148,7 @@
             height: 18px !important;
         }
 
+        /* Кнопка DONATE (Правая) */
         #floating-donate {
             position: fixed; bottom: 85px; right: 15px; width: 60px; height: 60px;
             background: linear-gradient(135deg, #26a17b 0%, #1d7e61 100%); 
@@ -135,7 +158,20 @@
             border: 2px solid #fff; cursor: pointer; color: white;
             text-align: center; line-height: 1;
         }
-        #floating-donate span { font-size: 9px; font-weight: bold; }
+
+        /* Кнопка VPN (Левая) - Идентичная копия */
+        #floating-vpn {
+            position: fixed; bottom: 85px; left: 15px; width: 60px; height: 60px;
+            background: linear-gradient(135deg, #00d4ff 0%, #008fb3 100%); 
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000;
+            border: 2px solid #fff; cursor: pointer; color: white;
+            text-align: center; line-height: 1;
+        }
+
+        .floating-label { font-size: 9px; font-weight: bold; }
+        
         .qr-container { text-align: center; margin: 15px 0; }
         .qr-container img { border: 5px solid white; border-radius: 10px; width: 160px; }
         .address-box { 
@@ -189,8 +225,12 @@
 <body>
     <div id="vignette" class="vignette-effect"></div>
 
+    <div id="floating-vpn" onclick="openVpnApp()">
+        <span class="floating-label">NEXUS<br>VPN</span>
+    </div>
+
     <div id="floating-donate" onclick="handleDonate()">
-        <span id="floating-donate-text">USDT<br>DONATE</span>
+        <span class="floating-label">USDT<br>DONATE</span>
     </div>
 
     <div class="metal-background">
@@ -231,8 +271,7 @@
             </div>
         </div>
 
-        <div id="event-log-container" class="event-monitor">
-            </div>
+        <div id="event-log-container" class="event-monitor"></div>
 
         <div class="bottom-ui">
             <div class="stat-row">
@@ -306,9 +345,7 @@
                 <h2 id="m-chat-title">GLOBAL CHAT</h2>
                 <div class="chat-container">
                     <div id="online-status" style="color: #00ff88; font-size: 10px; font-weight: bold; text-align: center; margin-bottom: 5px;">ONLINE: 0</div>
-
-                    <div id="chat-messages" class="chat-messages">
-                        </div>
+                    <div id="chat-messages" class="chat-messages"></div>
                     <div class="chat-input-area">
                         <input type="text" id="chat-input" class="nexus-input" placeholder="Enter message...">
                         <button class="nexus-btn-small" onclick="sendMessage()">SEND</button>
