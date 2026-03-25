@@ -20,6 +20,7 @@ window.deleteMsg = function(id) {
 
 (function() { 
     const tg = window.Telegram.WebApp;
+    const db = firebase.database();
     tg.expand();
     const user = tg.initDataUnsafe?.user;
 
@@ -625,32 +626,34 @@ window.deleteMsg = function(id) {
         tg.openTelegramLink(shareUrl);
     };
 
-    window.openVpnApp = function() {
+window.openVpnApp = function() {
     const tg = window.Telegram.WebApp;
     const user = tg.initDataUnsafe?.user;
 
     if (user) {
-        const id = user.id;
-        const name = encodeURIComponent(user.first_name || "User");
-        // Эта ссылка совпадает с тем, что мы прописали в Манифесте Android
-        const deepLink = `nexflow://auth?id=${id}&name=${name}`;
+        // Наша рабочая ссылка для открытия приложения
+        const deepLink = `https://nexflow-auth.com/vpn?id=${user.id}&user=${encodeURIComponent(user.first_name || "User")}`;
         
-        if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+        tg.HapticFeedback.impactOccurred('medium');
 
-        // Попытка открыть приложение
-        window.location.assign(deepLink);
+        // 1. Пытаемся открыть приложение
+        tg.openLink(deepLink);
 
-        // Резервный вариант: если через 2 секунды мы все еще в кликере, 
-        // значит приложение не установлено. Предлагаем скачать.
+        // 2. Если через 3 секунды юзер всё еще тут, предлагаем скачать
         setTimeout(() => {
-            tg.showConfirm(currentLang === 'RU' ? "Приложение NexFlow не найдено. Скачать APK?" : "NexFlow app not found. Download APK?", (ok) => {
+            tg.showConfirm("Приложение не открылось. Перейти в канал для скачивания последней версии?", (ok) => {
                 if (ok) {
-                    tg.openLink("https://nexus-app-6769e.web.app/app-fdroid-universal-debug.apk");
+                    // ОБЯЗАТЕЛЬНО В КАВЫЧКАХ ""
+                    tg.openLink("https://t.me/nexus_protocol/22"); 
                 }
             });
-        }, 2000);
+        }, 3000);
+        
+    } else {
+        tg.showAlert("Ошибка: Данные профиля не получены.");
     }
 };
+
     // ==========================================
     // СИСТЕМНЫЕ ФУНКЦИИ
     // ==========================================
