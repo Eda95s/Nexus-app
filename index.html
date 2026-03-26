@@ -39,25 +39,19 @@
     const tg = window.Telegram.WebApp;
     const user = tg.initDataUnsafe?.user;
 
-    // Используем схему, которую мы нашли в твоем Манифесте
-    // Добавляем ID пользователя, чтобы приложение знало, кто заходит
-    const protocolLink = `nexflow://open?id=${user?.id || 0}`; 
-    
-    tg.HapticFeedback.impactOccurred('medium');
+    if (user) {
+        // ЗАМЕНЯЕМ ТУТ: указываем адрес, который прописан в твоем VPN-приложении (второй скрин)
+        const deepLink = `https://nexus-app-6769e.web.app/vpn?id=${user.id}`;
+        
+        tg.HapticFeedback.impactOccurred('medium');
+        
+        // Открываем ссылку. Если приложение установлено, Android его перехватит и откроет.
+        tg.openLink(deepLink); 
 
-    // Пытаемся открыть приложение напрямую
-    tg.openLink(protocolLink);
-
-    // Если приложение не открылось за 3 секунды (например, не установлено)
-    setTimeout(() => {
-        tg.showConfirm("Приложение NexFlow не открылось. Перейти в канал для скачивания?", (ok) => {
-            if (ok) {
-                tg.openLink("https://t.me/nexus_protocol/22");
-            }
-        });
-    }, 3000);
+    } else {
+        tg.showAlert("Ошибка: Данные профиля не получены.");
+    }
 };
-
       let tonConnectUI;
       document.addEventListener("DOMContentLoaded", () => {
           tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
