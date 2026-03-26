@@ -830,7 +830,7 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
         updateUI();
     }, 100);
 
-    setInterval(saveData, 15000); // 15 секунд
+    setInterval(saveData, 5000); // 5 секунд
 
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
