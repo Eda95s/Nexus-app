@@ -650,20 +650,36 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
         }
     };
 
-    window.saveData = function() {
-        localStorage.setItem('nexus_bal', balance);
-        localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
-        localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
-        localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
-        localStorage.setItem('nexus_last_time', Date.now());
-        localStorage.setItem('nexus_version', GAME_VERSION);
-        localStorage.setItem('nexus_energy', energy);
-        localStorage.setItem('nexus_daily', lastDailyClaim);
-        localStorage.setItem('nexus_streak', dailyStreak);
-        if (typeof db !== 'undefined' && user?.id) {
-            db.ref('users/' + user.id).update({ balance: balance, v: GAME_VERSION, name: user.first_name });
-        }
-    };
+   window.saveData = function() {
+    localStorage.setItem('nexus_bal', balance);
+    localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
+    localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+    localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
+    localStorage.setItem('nexus_last_time', Date.now());
+    localStorage.setItem('nexus_version', GAME_VERSION);
+    localStorage.setItem('nexus_energy', energy);
+    localStorage.setItem('nexus_daily', lastDailyClaim);
+    localStorage.setItem('nexus_streak', dailyStreak);
+
+    if (typeof db !== 'undefined' && user?.id) {
+        const userRef = db.ref('users/' + user.id);
+        
+        // ИСПОЛЬЗУЕМ ТРАНЗАКЦИЮ И ТУТ, чтобы не затирать данные от VPN
+        userRef.transaction((currentData) => {
+            if (currentData) {
+                // Если в базе баланс больше, чем у нас локально (значит VPN поработал)
+                // берем большее значение
+                if (currentData.balance > balance) {
+                    balance = currentData.balance; 
+                }
+                currentData.balance = balance;
+                currentData.v = GAME_VERSION;
+                currentData.name = user.first_name;
+            }
+            return currentData;
+        });
+    }
+};
 
     window.loadLeaderboard = function() {
         if (typeof db === 'undefined') return;
@@ -775,12 +791,12 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
         updateUI();
     }, 100);
 
-    setInterval(saveData, 5000); 
+    setInterval(saveData, 15000); // 15 секунд
 
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
         
-        setInterval(syncWithServer, 5000);
+       setInterval(syncWithServer, 15000);
 
         const sp = tg.initDataUnsafe?.start_param;
         if (sp && !refClaimed) {
