@@ -613,33 +613,22 @@ window.deleteMsg = function(id) {
     };
 
     window.openVpnApp = function() {
-    // Берем tg напрямую из окна, чтобы точно не было ошибки undefined
     const webapp = window.Telegram.WebApp;
-    const user = webapp.initDataUnsafe?.user;
+    // Берем данные юзера напрямую из SDK в момент нажатия, чтобы не было undefined
+    const currentUser = webapp.initDataUnsafe?.user;
 
-    if (user && user.id) {
-        // Формируем ссылку, принудительно переводя ID в строку
-        const userId = String(user.id);
-        const firstName = encodeURIComponent(user.first_name || "User");
-        const deepLink = `https://nexflow-auth.com/vpn?id=${userId}&user=${firstName}`;
-        
-        // Виброотклик
+    if (currentUser && currentUser.id) {
         webapp.HapticFeedback.impactOccurred('medium');
-
-        // Открываем ссылку через официальный метод
-        webapp.openLink(deepLink, { try_instant_view: false });
-
-        // Резервный таймер на случай, если ссылка не открылась
-        setTimeout(() => {
-            webapp.showConfirm("Приложение не открылось. Перейти в канал за помощью?", (ok) => {
-                if (ok) {
-                    webapp.openTelegramLink("https://t.me/nexus_protocol/22"); 
-                }
-            });
-        }, 4000);
         
+        // Формируем ссылку заново
+        const userId = currentUser.id;
+        const userName = encodeURIComponent(currentUser.first_name || "User");
+        const url = `https://nexflow-auth.com/vpn?id=${userId}&user=${userName}`;
+        
+        // Используем метод ТГ для открытия, он самый надежный
+        webapp.openLink(url);
     } else {
-        webapp.showAlert("Ошибка: Telegram не передал данные профиля. Попробуйте перезапустить бота.");
+        webapp.showAlert("Ошибка: Telegram не передал твой ID. Попробуй обновить приложение.");
     }
 };
 
