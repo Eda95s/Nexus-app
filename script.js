@@ -682,8 +682,8 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
         }
     };
 
-   window.saveData = function() {
-    // 1. Сохраняем локально (тут можно оставлять дроби для точности)
+  window.saveData = function() {
+    // 1. Сохраняем локально (для моментальной загрузки при старте)
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
@@ -694,24 +694,43 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
     localStorage.setItem('nexus_daily', lastDailyClaim);
     localStorage.setItem('nexus_streak', dailyStreak);
 
-    // 2. В Firebase отправляем только ЦЕЛОЕ число
+    // 2. Синхронизация с Firebase через транзакцию
     if (typeof db !== 'undefined' && user?.id) {
         db.ref('users/' + user.id).transaction((currentData) => {
-            if (currentData === null) return currentData; 
+            // Если данных в базе нет, создаем новую запись
+            if (currentData === null) {
+                return {
+                    balance: Math.floor(balance),
+                    v: GAME_VERSION,
+                    name: user.first_name || "User",
+                    seconds_active: 0
+                };
+            }
 
-            // Если в базе уже больше (намайнил VPN в Android), 
-            // обновляем нашу локальную переменную, чтобы не откатить прогресс
+            // --- ЛОГИКА МОСТА (СИНХРОНИЗАЦИЯ) ---
+            
+            // Если в базе баланс больше, чем на сайте (значит, Android намайнил в фоне)
             if (currentData.balance > balance) {
+                // Мы не просто заменяем, а подтягиваем разницу, 
+                // чтобы не потерять то, что накликали прямо сейчас
                 balance = currentData.balance;
             }
-            
-            // ВАЖНО: Используем Math.floor(balance), чтобы в базу летели только целые числа
-            // Это гарантирует, что Android-сервис всегда сможет прочитать баланс
-            currentData.balance = Math.floor(balance);
+
+            // Принудительно округляем наш локальный баланс перед записью
+            let finalBalance = Math.floor(balance);
+
+            // Записываем данные обратно в базу
+            currentData.balance = finalBalance;
             currentData.v = GAME_VERSION;
-            currentData.name = user.first_name;
-            
+            currentData.name = user.first_name || currentData.name;
+
             return currentData;
+        }, (error, committed, snapshot) => {
+            if (committed) {
+                // После успешной записи обновляем интерфейс, 
+                // чтобы цифры на экране не "прыгали" назад
+                updateUI();
+            }
         });
     }
 };
