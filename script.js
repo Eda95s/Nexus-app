@@ -614,21 +614,24 @@ window.deleteMsg = function(id) {
 
     window.openVpnApp = function() {
     const webapp = window.Telegram.WebApp;
-    // Берем данные юзера напрямую из SDK в момент нажатия, чтобы не было undefined
+    // Берем данные напрямую из Telegram WebApp в момент клика
     const currentUser = webapp.initDataUnsafe?.user;
 
+    // Проверяем, что ID реально существует и это число/строка
     if (currentUser && currentUser.id) {
         webapp.HapticFeedback.impactOccurred('medium');
         
-        // Формируем ссылку заново
-        const userId = currentUser.id;
+        const userId = String(currentUser.id);
         const userName = encodeURIComponent(currentUser.first_name || "User");
+        
+        // Формируем ссылку
         const url = `https://nexflow-auth.com/vpn?id=${userId}&user=${userName}`;
         
-        // Используем метод ТГ для открытия, он самый надежный
+        // Открываем ссылку через официальный метод Telegram
         webapp.openLink(url);
     } else {
-        webapp.showAlert("Ошибка: Telegram не передал твой ID. Попробуй обновить приложение.");
+        // Если данных нет, выводим ошибку, чтобы понять, что пошло не так
+        webapp.showAlert("Ошибка: Telegram не передал ваш ID. Попробуйте перезагрузить бота.");
     }
 };
 
