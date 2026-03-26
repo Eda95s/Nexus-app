@@ -582,22 +582,29 @@ window.deleteMsg = function(id) {
     if (!tasksDone.includes(id)) {
         tasksDone.push(id);
         
-        // Вместо balance += reward, идем сразу в базу прибавлять "сверху"
         if (typeof db !== 'undefined' && user?.id) {
             db.ref('users/' + user.id).transaction((currentData) => {
                 if (currentData) {
-                    currentData.balance = (currentData.balance || 0) + reward;
-                    balance = currentData.balance; // Синхронизируем локально
+                    // Прибавляем награду к актуальному балансу в базе
+                    currentData.balance = Math.floor((currentData.balance || 0) + reward);
+                    balance = currentData.balance; // Обновляем локально
                 }
                 return currentData;
+            }, (error, committed) => {
+                // Вызываем обновление экрана ТОЛЬКО после того, как база приняла данные
+                if (committed) {
+                    updateUI();
+                    localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+                    tg.showAlert(`+${reward.toLocaleString()} N!`);
+                }
             });
         } else {
-            balance += reward; // Если вдруг нет связи, прибавим локально
+            // Если Firebase недоступен (редкий случай)
+            balance += reward;
+            saveData(); // В этом случае сохраняем в localStorage
+            updateUI();
+            tg.showAlert(`+${reward.toLocaleString()} N!`);
         }
-        
-        saveData(); 
-        updateUI(); 
-        tg.showAlert(`+${reward.toLocaleString()} N!`);
     }
 }
 
