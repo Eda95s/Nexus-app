@@ -683,35 +683,39 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
     };
 
  window.saveData = function() {
-    // 1. Локальное сохранение (пусть будет)
+    // 1. Сохраняем локально (для подстраховки)
     localStorage.setItem('nexus_bal', balance);
-    // ... (остальные localStorage оставляем как есть)
+    localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
+    localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
+    localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
+    localStorage.setItem('nexus_last_time', Date.now());
+    localStorage.setItem('nexus_version', GAME_VERSION);
+    localStorage.setItem('nexus_energy', energy);
+    localStorage.setItem('nexus_daily', lastDailyClaim);
+    localStorage.setItem('nexus_streak', dailyStreak);
 
+    // 2. В Firebase отправляем через транзакцию с ПРОВЕРКОЙ
     if (typeof db !== 'undefined' && user?.id) {
         db.ref('users/' + user.id).transaction((currentData) => {
-            if (currentData === null) return currentData;
+            if (currentData === null) return currentData; 
 
-            // Считаем разницу: сколько мы накликали в браузере с момента последней загрузки
-            // Но чтобы не усложнять, сделаем проще:
-            
-            if (balance > currentData.balance) {
-                // Если на сайте больше (мы накликали), записываем наш баланс
-                currentData.balance = Math.floor(balance);
-            } else {
-                // Если в базе больше (намайнил VPN), подтягиваем данные из базы в браузер
+            // Если в базе уже больше (намайнил VPN в Android), 
+            // забираем это значение в кликер
+            if (currentData.balance > balance) {
                 balance = currentData.balance;
             }
-
+            
+            // Записываем только ЦЕЛОЕ число (Math.floor)
+            currentData.balance = Math.floor(balance);
             currentData.v = GAME_VERSION;
-            currentData.name = user.first_name || currentData.name;
+            currentData.name = user.first_name;
             
             return currentData;
         }, (error, committed, snapshot) => {
-            if (error) {
-                console.error('Ошибка синхронизации Firebase:', error);
-            } else if (committed) {
-                console.log('Данные успешно засинхронизированы. Баланс:', snapshot.val().balance);
+            // ВАЖНО: Если запись прошла успешно, сразу обновляем UI
+            if (committed) {
                 updateUI();
+                console.log("✅ Синхронизация успешна:", snapshot.val().balance);
             }
         });
     }
