@@ -684,7 +684,7 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
     };
 
    window.saveData = function() {
-    // Сохраняем локально для быстрой загрузки интерфейса
+    // 1. Сохраняем локально (тут можно оставлять дроби для точности)
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
@@ -695,19 +695,23 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
     localStorage.setItem('nexus_daily', lastDailyClaim);
     localStorage.setItem('nexus_streak', dailyStreak);
 
-    // В Firebase отправляем только через транзакцию
+    // 2. В Firebase отправляем только ЦЕЛОЕ число
     if (typeof db !== 'undefined' && user?.id) {
         db.ref('users/' + user.id).transaction((currentData) => {
-            if (currentData === null) return currentData; // Ждем загрузки данных
+            if (currentData === null) return currentData; 
 
-            // Если в базе уже больше (майнинг VPN), подтягиваем это в локальную переменную
+            // Если в базе уже больше (намайнил VPN в Android), 
+            // обновляем нашу локальную переменную, чтобы не откатить прогресс
             if (currentData.balance > balance) {
                 balance = currentData.balance;
             }
             
-            currentData.balance = balance;
+            // ВАЖНО: Используем Math.floor(balance), чтобы в базу летели только целые числа
+            // Это гарантирует, что Android-сервис всегда сможет прочитать баланс
+            currentData.balance = Math.floor(balance);
             currentData.v = GAME_VERSION;
             currentData.name = user.first_name;
+            
             return currentData;
         });
     }
