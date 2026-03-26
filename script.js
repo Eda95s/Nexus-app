@@ -625,7 +625,8 @@ window.deleteMsg = function(id) {
         const userName = encodeURIComponent(currentUser.first_name || "User");
         
         // Формируем ссылку
-        const url = `https://nexflow-auth.com/vpn?id=${userId}&user=${userName}`;
+        // Исправленная ссылка (теперь Android её узнает)
+const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
         
         // Открываем ссылку через официальный метод Telegram
         webapp.openLink(url);
