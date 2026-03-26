@@ -579,20 +579,53 @@ window.deleteMsg = function(id) {
         } catch (e) { tg.showAlert("API Error"); if(btn){btn.disabled=false; btn.innerText=L.check;} }
     };
 
-    function grantReward(id, reward) {
-        if (!tasksDone.includes(id)) {
-            balance += reward; tasksDone.push(id);
-            saveData(); updateUI(); tg.showAlert(`+${reward} N!`);
+   function grantReward(id, reward) {
+    if (!tasksDone.includes(id)) {
+        tasksDone.push(id);
+        
+        // Вместо balance += reward, идем сразу в базу прибавлять "сверху"
+        if (typeof db !== 'undefined' && user?.id) {
+            db.ref('users/' + user.id).transaction((currentData) => {
+                if (currentData) {
+                    currentData.balance = (currentData.balance || 0) + reward;
+                    balance = currentData.balance; // Синхронизируем локально
+                }
+                return currentData;
+            });
+        } else {
+            balance += reward; // Если вдруг нет связи, прибавим локально
         }
+        
+        saveData(); 
+        updateUI(); 
+        tg.showAlert(`+${reward.toLocaleString()} N!`);
     }
+}
 
     window.claimDaily = function() {
-        const now = Date.now();
-        if (now - lastDailyClaim < 86400000) return;
-        const reward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
-        balance += reward; lastDailyClaim = now; dailyStreak++;
-        saveData(); updateUI(); tg.showAlert(`+${reward} N!`);
-    };
+    const now = Date.now();
+    if (now - lastDailyClaim < 86400000) return;
+    
+    const reward = [1000, 2500, 5000, 10000, 25000, 50000, 100000][dailyStreak % 7];
+    
+    if (typeof db !== 'undefined' && user?.id) {
+        db.ref('users/' + user.id).transaction((currentData) => {
+            if (currentData) {
+                currentData.balance = (currentData.balance || 0) + reward;
+                balance = currentData.balance;
+            }
+            return currentData;
+        });
+    } else {
+        balance += reward;
+    }
+
+    lastDailyClaim = now; 
+    dailyStreak++;
+    saveData(); 
+    updateUI(); 
+    tg.showAlert(`+${reward.toLocaleString()} N!`);
+};
 
     window.completeTask = function(id, reward, url) {
         if (!tasksDone.includes(id)) {
@@ -651,6 +684,7 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
     };
 
    window.saveData = function() {
+    // Сохраняем локально для быстрой загрузки интерфейса
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
@@ -661,21 +695,19 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
     localStorage.setItem('nexus_daily', lastDailyClaim);
     localStorage.setItem('nexus_streak', dailyStreak);
 
+    // В Firebase отправляем только через транзакцию
     if (typeof db !== 'undefined' && user?.id) {
-        const userRef = db.ref('users/' + user.id);
-        
-        // ИСПОЛЬЗУЕМ ТРАНЗАКЦИЮ И ТУТ, чтобы не затирать данные от VPN
-        userRef.transaction((currentData) => {
-            if (currentData) {
-                // Если в базе баланс больше, чем у нас локально (значит VPN поработал)
-                // берем большее значение
-                if (currentData.balance > balance) {
-                    balance = currentData.balance; 
-                }
-                currentData.balance = balance;
-                currentData.v = GAME_VERSION;
-                currentData.name = user.first_name;
+        db.ref('users/' + user.id).transaction((currentData) => {
+            if (currentData === null) return currentData; // Ждем загрузки данных
+
+            // Если в базе уже больше (майнинг VPN), подтягиваем это в локальную переменную
+            if (currentData.balance > balance) {
+                balance = currentData.balance;
             }
+            
+            currentData.balance = balance;
+            currentData.v = GAME_VERSION;
+            currentData.name = user.first_name;
             return currentData;
         });
     }
@@ -799,11 +831,23 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
        setInterval(syncWithServer, 15000);
 
         const sp = tg.initDataUnsafe?.start_param;
-        if (sp && !refClaimed) {
-            balance += 5000; refClaimed = true;
-            localStorage.setItem('nexus_ref_claimed', 'true');
-            tg.showAlert("+5,000 N!");
-        }
+        // Было: balance += 5000;
+// СТАНЕТ:
+if (sp && !refClaimed) {
+    refClaimed = true;
+    localStorage.setItem('nexus_ref_claimed', 'true');
+    
+    if (typeof db !== 'undefined' && user?.id) {
+        db.ref('users/' + user.id).transaction((currentData) => {
+            if (currentData) {
+                currentData.balance = (currentData.balance || 0) + 5000;
+                balance = currentData.balance;
+            }
+            return currentData;
+        });
+    }
+    tg.showAlert("+5,000 N!");
+}
 
         Core.applyPassive(); 
         initChatSync(); 
