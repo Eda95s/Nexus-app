@@ -830,34 +830,54 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
         updateUI();
     }, 100);
 
-    setInterval(saveData, 5000); // 5 секунд
+   // --- СЕКЦИЯ СОХРАНЕНИЯ (ВСТАВИТЬ В КОНЕЦ ФАЙЛА) ---
+
+    // 1. Быстрое сохранение каждые 5 секунд
+ // ... твой код с объявлением переменных ...
 
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
         
+        // 1. Быстрое сохранение каждые 5 секунд
+        setInterval(() => {
+            saveData(); 
+        }, 5000); 
+
+        // 2. Сохранение при сворачивании (для Telegram)
+        tg.onEvent('viewportChanged', (isStateChanged) => {
+            if (isStateChanged) saveData();
+        });
+
+        // 3. Сохранение перед закрытием вкладки
+        window.addEventListener('beforeunload', () => {
+            saveData();
+        });
+
+        // 4. Подтягиваем данные из базы через секунду после старта
+        setTimeout(saveData, 1000);
 
         const sp = tg.initDataUnsafe?.start_param;
-        // Было: balance += 5000;
-// СТАНЕТ:
-if (sp && !refClaimed) {
-    refClaimed = true;
-    localStorage.setItem('nexus_ref_claimed', 'true');
-    
-    if (typeof db !== 'undefined' && user?.id) {
-        db.ref('users/' + user.id).transaction((currentData) => {
-            if (currentData) {
-                currentData.balance = (currentData.balance || 0) + 5000;
-                balance = currentData.balance;
+        if (sp && !refClaimed) {
+            refClaimed = true;
+            localStorage.setItem('nexus_ref_claimed', 'true');
+            
+            if (typeof db !== 'undefined' && user?.id) {
+                db.ref('users/' + user.id).transaction((currentData) => {
+                    if (currentData) {
+                        currentData.balance = (currentData.balance || 0) + 5000;
+                        balance = currentData.balance;
+                    }
+                    return currentData;
+                });
             }
-            return currentData;
-        });
-    }
-    tg.showAlert("+5,000 N!");
-}
+            tg.showAlert("+5,000 N!");
+        }
 
         Core.applyPassive(); 
         initChatSync(); 
-        syncWithServer();
+        
+        // syncWithServer(); <--- ЭТУ СТРОКУ Я УДАЛИЛ, ОНА БОЛЬШЕ НЕ НУЖНА
+        
         updateUI(); 
         NexusEvent.log("System Online.", "Система онлайн.");
     });
