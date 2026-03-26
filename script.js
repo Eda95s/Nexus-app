@@ -844,7 +844,22 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
 
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
-        
+
+        // --- ДОБАВЬ ЭТОТ БЛОК ТУТ ---
+        if (user?.id) {
+            db.ref('users/' + user.id + '/balance').on('value', (snapshot) => {
+                const newBalance = snapshot.val();
+                if (newBalance !== null) {
+                    // Если в базе число больше (намайнил VPN), обновляем сайт
+                    if (newBalance > balance) {
+                        balance = newBalance;
+                        updateUI(); 
+                    }
+                }
+            });
+        }
+        // ----------------------------
+
         // 1. Быстрое сохранение каждые 5 секунд
         setInterval(() => {
             saveData(); 
