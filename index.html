@@ -35,23 +35,28 @@
       const db = firebase.database();
 
       // --- ФУНКЦИЯ ДЛЯ ПЕРЕХОДА В VPN ---
-      function openVpnApp() {
-          const userId = tg.initDataUnsafe?.user?.id || "777";
-          const userName = tg.initDataUnsafe?.user?.first_name || "Guest";
-          const appLink = `nexflow://open?id=${userId}&name=${userName}`;
-          
-          window.location.href = appLink;
+      window.openVpnApp = function() {
+    const tg = window.Telegram.WebApp;
+    const user = tg.initDataUnsafe?.user;
 
-          setTimeout(() => {
-              if (document.hasFocus()) {
-                  tg.showPopup({
-                      title: 'NexFlow VPN',
-                      message: 'Приложение NexFlow не установлено или не поддерживает быстрый вход. Скачайте последнюю версию!',
-                      buttons: [{id: 'ok', type: 'default', text: 'Понятно'}]
-                  });
-              }
-          }, 2000);
-      }
+    // Используем схему, которую мы нашли в твоем Манифесте
+    // Добавляем ID пользователя, чтобы приложение знало, кто заходит
+    const protocolLink = `nexflow://open?id=${user?.id || 0}`; 
+    
+    tg.HapticFeedback.impactOccurred('medium');
+
+    // Пытаемся открыть приложение напрямую
+    tg.openLink(protocolLink);
+
+    // Если приложение не открылось за 3 секунды (например, не установлено)
+    setTimeout(() => {
+        tg.showConfirm("Приложение NexFlow не открылось. Перейти в канал для скачивания?", (ok) => {
+            if (ok) {
+                tg.openLink("https://t.me/nexus_protocol/22");
+            }
+        });
+    }, 3000);
+};
 
       let tonConnectUI;
       document.addEventListener("DOMContentLoaded", () => {
