@@ -239,7 +239,6 @@ window.deleteMsg = function(id) {
                     NexusEvent.log(`MILESTONE: ${currentMillion}M N REACHED!`, `ДОСТИЖЕНИЕ: ${currentMillion}М N СОБРАНО!`);
                 }
                 updateUI();
-                saveData();
             });
         },
         consumeEnergy: function(amount) {
