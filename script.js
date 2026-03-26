@@ -835,7 +835,6 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
         
-       setInterval(syncWithServer, 15000);
 
         const sp = tg.initDataUnsafe?.start_param;
         // Было: balance += 5000;
