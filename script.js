@@ -384,6 +384,8 @@ window.deleteMsg = function(id) {
         document.getElementById('m-rank-title').innerText = L.top;
         document.getElementById('m-chat-title').innerText = L.chatTitle;
 
+        document.getElementById('lbl-desktop-title').innerText = langMap[currentLang].desktopTitle;
+        document.getElementById('lbl-sync-pc').innerText = langMap[currentLang].syncBtn;
         document.getElementById('lbl-lang').innerText = L.lang;
         document.getElementById('lbl-haptic').innerText = L.haptic;
         document.getElementById('lang-btn').innerText = currentLang;
