@@ -653,25 +653,31 @@ window.deleteMsg = function(id) {
 
     window.openVpnApp = function() {
     const webapp = window.Telegram.WebApp;
-    // Берем данные напрямую из Telegram WebApp в момент клика
     const currentUser = webapp.initDataUnsafe?.user;
 
-    // Проверяем, что ID реально существует и это число/строка
     if (currentUser && currentUser.id) {
         webapp.HapticFeedback.impactOccurred('medium');
         
         const userId = String(currentUser.id);
         const userName = encodeURIComponent(currentUser.first_name || "User");
         
-        // Формируем ссылку
-        // Исправленная ссылка (теперь Android её узнает)
-const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
+        // 1. Ссылка для открытия ПРИЛОЖЕНИЯ (Deep Link)
+        // Она передаст ID прямо в твой Kotlin-код
+        const appUrl = `nexflow://open?TG_USER_ID=${userId}`;
         
-        // Открываем ссылку через официальный метод Telegram
-        webapp.openLink(url);
+        // 2. Ссылка для открытия САЙТА (Запасная)
+        const webUrl = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
+        
+        // Сначала пробуем открыть приложение через кастомную схему
+        webapp.openLink(appUrl);
+
+        // Если через 500мс приложение не открылось (его нет), откроется сайт
+        setTimeout(() => {
+            webapp.openLink(webUrl);
+        }, 500);
+
     } else {
-        // Если данных нет, выводим ошибку, чтобы понять, что пошло не так
-        webapp.showAlert("Ошибка: Telegram не передал ваш ID. Попробуйте перезагрузить бота.");
+        webapp.showAlert("Ошибка: ID не найден.");
     }
 };
 
