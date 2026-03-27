@@ -134,6 +134,37 @@ window.deleteMsg = function(id) {
             setTimeout(() => entry.style.opacity = '0.3', 2000);
         }
     };
+    // --- СИСТЕМА ПРИВЯЗКИ ПК ---
+    window.generateSyncCode = async function() {
+        const tg = window.Telegram.WebApp;
+        const userId = String(tg.initDataUnsafe?.user?.id || "test_user");
+        
+        // 1. Генерируем случайный код из 6 цифр
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        try {
+            // 2. Записываем в Firebase: код -> ID пользователя
+            // Ставим время жизни кода 5 минут (чтобы не висел вечно)
+            await firebase.database().ref('sync_codes/' + code).set({
+                userId: userId,
+                expires: Date.now() + (5 * 60 * 1000) 
+            });
+
+            // 3. Выводим пользователю красивое уведомление
+            tg.showPopup({
+                title: 'Синхронизация с ПК',
+                message: `Ваш код доступа: ${code}\nВведите его в приложении на Windows.\nКод действует 5 минут.`,
+                buttons: [{type: 'ok', text: 'Понял'}]
+            });
+            
+            NexusEvent.log("Sync code generated", "Код синхронизации создан");
+            tg.HapticFeedback.notificationOccurred('success');
+
+        } catch (e) {
+            console.error("Ошибка генерации кода:", e);
+            tg.showAlert("Ошибка при создании кода. Попробуйте еще раз.");
+        }
+    };
 
     // --- REALTIME CHAT ---
     window.sendMessage = function() {
