@@ -192,6 +192,11 @@
             </div>
         </div>
 
+      <div class="metal-background">
+    <div class="vignette-effect"></div>
+    
+    <div class="main-app-container">
+        
         <div class="header-section">
             <div id="user-name" style="color: #00f2ff; font-weight: bold; margin-bottom: 5px;">Загрузка...</div>
             <div id="rank-badge" class="rank-label">RANK: ROOKIE</div>
@@ -200,7 +205,9 @@
         </div>
         
         <div class="click-area" id="touch-zone">
-            <div class="nexus-button" id="coin-visual"><span class="nexus-symbol">N</span></div>
+            <div class="nexus-button" id="coin-visual">
+                <span class="nexus-symbol">N</span>
+            </div>
         </div>
 
         <div id="event-log-container" class="event-monitor"></div>
@@ -208,19 +215,25 @@
         <div class="bottom-ui">
             <div class="stat-row">
                 <div class="label-with-icon">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 10V3L4 14H11V21L20 10H13Z"/></svg><span id="lbl-energy">ENERGY</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 10V3L4 14H11V21L20 10H13Z"/></svg>
+                    <span id="lbl-energy">ENERGY</span>
                 </div>
                 <div class="bar-bg"><div id="energy-fill" class="fill-orange"></div></div>
             </div>
+            
             <div class="stat-row">
                 <div class="label-with-icon">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg><span id="lbl-sync">OVERDRIVE</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
+                    <span id="lbl-sync">OVERDRIVE</span>
                 </div>
                 <div class="bar-bg"><div id="boost-fill" class="fill-cyan"></div></div>
             </div>
+            
             <div id="od-btn" class="sync-btn" onclick="activateOverdrive()">LOADING 0%</div>
         </div>
 
+    </div> <div class="nav-bar">...Ваше меню...</div>
+</div>
         <div id="roadmap-modal" class="modal-overlay">
             <div class="modal-content full-modal">
                 <h2 id="m-roadmap-title" style="color: #f1c40f;">NEXUS ROADMAP</h2>
