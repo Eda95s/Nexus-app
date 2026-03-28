@@ -734,8 +734,8 @@ window.deleteMsg = function(id) {
         }
     };
 
- window.saveData = function() {
-    // 1. Сохраняем локально (для подстраховки)
+window.saveData = function() {
+    // 1. Сохраняем локально
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
@@ -746,28 +746,38 @@ window.deleteMsg = function(id) {
     localStorage.setItem('nexus_daily', lastDailyClaim);
     localStorage.setItem('nexus_streak', dailyStreak);
 
-    // 2. В Firebase отправляем через транзакцию с ПРОВЕРКОЙ
+    // 2. В Firebase отправляем через транзакцию
     if (typeof db !== 'undefined' && user?.id) {
         db.ref('users/' + user.id).transaction((currentData) => {
-            if (currentData === null) return currentData; 
+            // ИСПРАВЛЕНИЕ: Если юзера нет в базе (null), создаем начальный объект
+            if (currentData === null) {
+                return {
+                    balance: Math.floor(balance),
+                    name: user.first_name || "Explorer",
+                    v: GAME_VERSION,
+                    id: user.id
+                };
+            }
 
-            // Если в базе уже больше (намайнил VPN в Android), 
-            // забираем это значение в кликер
+            // Если юзер уже есть в базе:
+            // Проверяем, не намайнил ли он больше в Android-приложении
             if (currentData.balance > balance) {
                 balance = currentData.balance;
             }
             
-            // Записываем только ЦЕЛОЕ число (Math.floor)
+            // Обновляем данные
             currentData.balance = Math.floor(balance);
             currentData.v = GAME_VERSION;
-            currentData.name = user.first_name;
+            currentData.name = user.first_name || currentData.name;
             
             return currentData;
         }, (error, committed, snapshot) => {
-            // ВАЖНО: Если запись прошла успешно, сразу обновляем UI
             if (committed) {
                 updateUI();
                 console.log("✅ Синхронизация успешна:", snapshot.val().balance);
+            }
+            if (error) {
+                console.error("❌ Ошибка транзакции:", error);
             }
         });
     }
