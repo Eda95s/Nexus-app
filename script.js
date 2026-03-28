@@ -103,7 +103,7 @@ syncUserWithDb();
     let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
     let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
         node: { lvl: 1, cost: 45000, power: 1 },
-        vpn: { lvl: 0, cost: 50000, income: 1 }
+        vpn: { lvl: 1, cost: 50000, income: 1 }
     };
 
     let activeBoosts = JSON.parse(localStorage.getItem('nexus_active_boosts')) || {
@@ -345,8 +345,9 @@ syncUserWithDb();
             } else {
                 // Если у новичка еще нет уровней в базе, ставим хотя бы 0, чтобы не было ошибки
                 console.log("Майнинг пока не активен: уровень VPN 0 или не загружен");
-            }
-        }
+          }
+        } // ЗАКРЫЛИ ФУНКЦИЮ
+    }; // ЗАКРЫЛИ ОБЪЕКТ Core (ЭТОЙ СКОБКИ У ТЕБЯ НЕ ХВАТАЛО)
 
     const langMap = {
         EN: {
