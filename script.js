@@ -24,26 +24,7 @@ window.deleteMsg = function(id) {
     const tg = window.Telegram.WebApp;
     const db = firebase.database();
     tg.expand();
-    tg.ready(); // ОБЯЗАТЕЛЬНО: сообщает Telegram, что приложение загружено и можно нажимать кнопки
-
     const user = tg.initDataUnsafe?.user;
-
-    // === БЛОК АНТИ-ВАСЯ (ИСПРАВЛЕННЫЙ ДЛЯ СМАРТФОНА) ===
-    const savedId = localStorage.getItem('nexus_user_id');
-    if (user && user.id) {
-        if (savedId && savedId !== String(user.id)) {
-            console.log("⚠️ Смена аккаунта! Очистка старых данных...");
-            // Чистим только прогресс, чтобы не вешать WebView бесконечными релоадами
-            localStorage.removeItem('nexus_bal');
-            localStorage.removeItem('nexus_upgrades');
-            localStorage.removeItem('nexus_tasks');
-            localStorage.removeItem('nexus_active_boosts');
-            localStorage.removeItem('nexus_energy');
-            localStorage.setItem('nexus_user_id', user.id);
-        } else {
-            localStorage.setItem('nexus_user_id', user.id);
-        }
-    }
 
     // ==========================================
     // КОНФИГУРАЦИЯ
@@ -51,8 +32,7 @@ window.deleteMsg = function(id) {
     const GAME_VERSION = "2.2.0_FIREBASE_ONLY"; 
     const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o";
     const CHANNEL_ID = "-1002086386401";
-    // Сюда впиши адрес своего сервера, если он есть, либо оставь пустым
-    const API_URL = "https://your-api-server.com"; 
+    const API_URL = "https://your-api-server.com"; // Добавлено для корректной работы syncWithServer
 
     function checkFirebase() {
         const connectedRef = firebase.database().ref(".info/connected");
@@ -65,19 +45,6 @@ window.deleteMsg = function(id) {
         });
     }
     checkFirebase();
-    
-    // Эту функцию оставляем, она нужна для общего сброса при обновлении версии игры
-    function checkVersionReset() {
-        const savedVersion = localStorage.getItem('nexus_version');
-        if (savedVersion !== GAME_VERSION) {
-            localStorage.clear();
-            localStorage.setItem('nexus_version', GAME_VERSION);
-            if (user && user.id) localStorage.setItem('nexus_user_id', user.id);
-            return true;
-        }
-        return false;
-    }
-    checkVersionReset(); // Вызываем проверку версии
     
     function checkVersionReset() {
         const savedVersion = localStorage.getItem('nexus_version');
@@ -165,37 +132,6 @@ window.deleteMsg = function(id) {
             container.appendChild(entry);
             if(container.childNodes.length > 3) container.removeChild(container.firstChild);
             setTimeout(() => entry.style.opacity = '0.3', 2000);
-        }
-    };
-    // --- СИСТЕМА ПРИВЯЗКИ ПК ---
-    window.generateSyncCode = async function() {
-        const tg = window.Telegram.WebApp;
-        const userId = String(tg.initDataUnsafe?.user?.id || "test_user");
-        
-        // 1. Генерируем случайный код из 6 цифр
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        try {
-            // 2. Записываем в Firebase: код -> ID пользователя
-            // Ставим время жизни кода 5 минут (чтобы не висел вечно)
-            await firebase.database().ref('sync_codes/' + code).set({
-                userId: userId,
-                expires: Date.now() + (5 * 60 * 1000) 
-            });
-
-            // 3. Выводим пользователю красивое уведомление
-            tg.showPopup({
-                title: 'Синхронизация с ПК',
-                message: `Ваш код доступа: ${code}\nВведите его в приложении на Windows.\nКод действует 5 минут.`,
-                buttons: [{type: 'ok', text: 'Понял'}]
-            });
-            
-            NexusEvent.log("Sync code generated", "Код синхронизации создан");
-            tg.HapticFeedback.notificationOccurred('success');
-
-        } catch (e) {
-            console.error("Ошибка генерации кода:", e);
-            tg.showAlert("Ошибка при создании кода. Попробуйте еще раз.");
         }
     };
 
@@ -331,33 +267,27 @@ window.deleteMsg = function(id) {
     };
 
     const langMap = {
-    EN: {
-        mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
-        sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "CHARGE", ready: "READY!",
-        buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
-        task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
-        donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
-        daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "INVITE", wait: "WAIT",
-        go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!", lowBal: "NEED 100K ON BALANCE!",
-        chatTitle: "GLOBAL CHAT", chatLabel: "CHAT", chatPlace: "Enter message...", send: "SEND",
-        // Новые ключи для ПК
-        syncBtn: "SYNC CODE",
-        desktopTitle: "DESKTOP PC"
-    },
-    RU: {
-        mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
-        sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАРЯД", ready: "ГОТОВО!",
-        buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
-        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
-        donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
-        daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "ПРИГЛАСИТЬ", wait: "ОЖИДАНИЕ",
-        go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!", lowBal: "НУЖНО 100К НА БАЛАНСЕ!",
-        chatTitle: "ОБЩИЙ ЧАТ", chatLabel: "ЧАТ", chatPlace: "Ваше сообщение...", send: "ОТПРАВИТЬ",
-        // Новые ключи для ПК
-        syncBtn: "СИНХРОНИЗАЦИЯ",
-        desktopTitle: "КОМПЬЮТЕР"
-    }
-};
+        EN: {
+            mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
+            sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "CHARGE", ready: "READY!",
+            buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
+            task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
+            donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
+            daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "INVITE", wait: "WAIT",
+            go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!", lowBal: "NEED 100K ON BALANCE!",
+            chatTitle: "GLOBAL CHAT", chatLabel: "CHAT", chatPlace: "Enter message...", send: "SEND"
+        },
+        RU: {
+            mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
+            sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАРЯД", ready: "ГОТОВО!",
+            buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
+            task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
+            donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
+            daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "ПРИГЛАСИТЬ", wait: "ОЖИДАНИЕ",
+            go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!", lowBal: "НУЖНО 100К НА БАЛАНСЕ!",
+            chatTitle: "ОБЩИЙ ЧАТ", chatLabel: "ЧАТ", chatPlace: "Ваше сообщение...", send: "ОТПРАВИТЬ"
+        }
+    };
 
     const RANKS = [
         { name: "ROOKIE", limit: 0 }, { name: "MINER", limit: 10000 }, { name: "PRO MINER", limit: 50000 },
@@ -417,8 +347,6 @@ window.deleteMsg = function(id) {
         document.getElementById('m-rank-title').innerText = L.top;
         document.getElementById('m-chat-title').innerText = L.chatTitle;
 
-        document.getElementById('lbl-desktop-title').innerText = langMap[currentLang].desktopTitle;
-        document.getElementById('lbl-sync-pc').innerText = langMap[currentLang].syncBtn;
         document.getElementById('lbl-lang').innerText = L.lang;
         document.getElementById('lbl-haptic').innerText = L.haptic;
         document.getElementById('lang-btn').innerText = currentLang;
@@ -725,31 +653,25 @@ window.deleteMsg = function(id) {
 
     window.openVpnApp = function() {
     const webapp = window.Telegram.WebApp;
+    // Берем данные напрямую из Telegram WebApp в момент клика
     const currentUser = webapp.initDataUnsafe?.user;
 
+    // Проверяем, что ID реально существует и это число/строка
     if (currentUser && currentUser.id) {
         webapp.HapticFeedback.impactOccurred('medium');
         
         const userId = String(currentUser.id);
         const userName = encodeURIComponent(currentUser.first_name || "User");
         
-        // 1. Ссылка для открытия ПРИЛОЖЕНИЯ (Deep Link)
-        // Она передаст ID прямо в твой Kotlin-код
-        const appUrl = `nexflow://open?TG_USER_ID=${userId}`;
+        // Формируем ссылку
+        // Исправленная ссылка (теперь Android её узнает)
+const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
         
-        // 2. Ссылка для открытия САЙТА (Запасная)
-        const webUrl = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
-        
-        // Сначала пробуем открыть приложение через кастомную схему
-        webapp.openLink(appUrl);
-
-        // Если через 500мс приложение не открылось (его нет), откроется сайт
-        setTimeout(() => {
-            webapp.openLink(webUrl);
-        }, 500);
-
+        // Открываем ссылку через официальный метод Telegram
+        webapp.openLink(url);
     } else {
-        webapp.showAlert("Ошибка: ID не найден.");
+        // Если данных нет, выводим ошибку, чтобы понять, что пошло не так
+        webapp.showAlert("Ошибка: Telegram не передал ваш ID. Попробуйте перезагрузить бота.");
     }
 };
 
@@ -768,7 +690,7 @@ window.deleteMsg = function(id) {
     };
 
  window.saveData = function() {
-    // 1. Сохраняем локально
+    // 1. Сохраняем локально (для подстраховки)
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
@@ -776,38 +698,31 @@ window.deleteMsg = function(id) {
     localStorage.setItem('nexus_last_time', Date.now());
     localStorage.setItem('nexus_version', GAME_VERSION);
     localStorage.setItem('nexus_energy', energy);
+    localStorage.setItem('nexus_daily', lastDailyClaim);
+    localStorage.setItem('nexus_streak', dailyStreak);
 
-    // 2. В Firebase отправляем через транзакцию
+    // 2. В Firebase отправляем через транзакцию с ПРОВЕРКОЙ
     if (typeof db !== 'undefined' && user?.id) {
         db.ref('users/' + user.id).transaction((currentData) => {
-            // ИСПРАВЛЕНИЕ: Если юзера нет, СОЗДАЕМ его, а не выходим
-            if (currentData === null) {
-                return {
-                    balance: Math.floor(balance),
-                    name: user.first_name || "User",
-                    v: GAME_VERSION,
-                    id: user.id
-                };
-            }
+            if (currentData === null) return currentData; 
 
-            // Синхронизация с майнингом из Android
+            // Если в базе уже больше (намайнил VPN в Android), 
+            // забираем это значение в кликер
             if (currentData.balance > balance) {
                 balance = currentData.balance;
             }
             
+            // Записываем только ЦЕЛОЕ число (Math.floor)
             currentData.balance = Math.floor(balance);
             currentData.v = GAME_VERSION;
-            currentData.name = user.first_name || currentData.name;
+            currentData.name = user.first_name;
             
             return currentData;
         }, (error, committed, snapshot) => {
+            // ВАЖНО: Если запись прошла успешно, сразу обновляем UI
             if (committed) {
                 updateUI();
-                
-                // --- СВЯЗЬ С ANDROID (ОЖИВЛЯЕМ КНОПКУ VPN) ---
-                if (window.Android && window.Android.onBalanceUpdated) {
-                    window.Android.onBalanceUpdated(Math.floor(balance));
-                }
+                console.log("✅ Синхронизация успешна:", snapshot.val().balance);
             }
         });
     }
@@ -980,76 +895,13 @@ window.deleteMsg = function(id) {
             tg.showAlert("+5,000 N!");
         }
 
-        // === ВОТ ЭТОТ БЛОК ОЖИВИТ КНОПКУ VPN ===
-    window.selectMode = function(mode) {
-        console.log("Переключение режима на:", mode);
-
-        // Если нажали VPN - стучимся в Android APK
-        if (mode === 'VPN' || mode === 'vpn') {
-            if (window.Android && window.Android.openVpnInterface) {
-                // Сначала сохраняем баланс, чтобы в VPN были актуальные цифры
-                saveData(); 
-                window.Android.openVpnInterface();
-            }
-        }
-
-        // Логика переключения экранов (чтобы открывались вкладки)
-        const sections = document.querySelectorAll('.app-section');
-        sections.forEach(s => s.style.display = 'none');
-        
-        const activeSection = document.getElementById('section-' + mode.toLowerCase());
-        if (activeSection) {
-            activeSection.style.display = 'flex';
-        }
-
-        // Подсветка кнопок в меню
-        const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(i => i.classList.remove('active'));
-        
-        // Ищем кнопку, у которой в onclick написано имя режима
-        navItems.forEach(i => {
-            if (i.getAttribute('onclick') && i.getAttribute('onclick').includes(mode)) {
-                i.classList.add('active');
-            }
-        });
-    };
-    // =======================================
         Core.applyPassive(); 
         initChatSync(); 
         
         // syncWithServer(); <--- ЭТУ СТРОКУ Я УДАЛИЛ, ОНА БОЛЬШЕ НЕ НУЖНА
         
-      // ... (весь твой код выше) ...
-        
         updateUI(); 
         NexusEvent.log("System Online.", "Система онлайн.");
+    });
 
-    }); // КОНЕЦ DOMContentLoaded
-
-    // ВЫНОСИМ ФУНКЦИЮ НАРУЖУ (чтобы точно работала на смартфоне)
-    window.selectMode = function(mode) {
-        console.log("Переключение режима на:", mode);
-
-        if (mode === 'VPN' || mode === 'vpn') {
-            if (window.Android && window.Android.openVpnInterface) {
-                if (typeof saveData === 'function') saveData(); 
-                window.Android.openVpnInterface();
-            }
-        }
-
-        const sections = document.querySelectorAll('.app-section');
-        sections.forEach(s => s.style.display = 'none');
-        
-        const activeSection = document.getElementById('section-' + mode.toLowerCase());
-        if (activeSection) activeSection.style.display = 'flex';
-
-        const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(i => {
-            i.classList.remove('active');
-            if (i.getAttribute('onclick') && i.getAttribute('onclick').includes(mode)) {
-                i.classList.add('active');
-            }
-        });
-    };
-
-})(); // ФИНАЛЬНОЕ ЗАКРЫТИЕ ФАЙЛА
+})();
