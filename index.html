@@ -36,22 +36,16 @@
 
       // --- ФУНКЦИЯ ДЛЯ ПЕРЕХОДА В VPN ---
       window.openVpnApp = function() {
-    const tg = window.Telegram.WebApp;
-    const user = tg.initDataUnsafe?.user;
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            const deepLink = `https://nexus-app-6769e.web.app/vpn?id=${user.id}`;
+            tg.HapticFeedback.impactOccurred('medium');
+            tg.openLink(deepLink); 
+        } else {
+            tg.showAlert("Ошибка: Данные профиля не получены.");
+        }
+      };
 
-    if (user) {
-        // ЗАМЕНЯЕМ ТУТ: указываем адрес, который прописан в твоем VPN-приложении (второй скрин)
-        const deepLink = `https://nexus-app-6769e.web.app/vpn?id=${user.id}`;
-        
-        tg.HapticFeedback.impactOccurred('medium');
-        
-        // Открываем ссылку. Если приложение установлено, Android его перехватит и откроет.
-        tg.openLink(deepLink); 
-
-    } else {
-        tg.showAlert("Ошибка: Данные профиля не получены.");
-    }
-};
       let tonConnectUI;
       document.addEventListener("DOMContentLoaded", () => {
           tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
@@ -131,8 +125,8 @@
     </script>
 
     <style>
-        .top-controls { display: flex; justify-content: space-between; padding: 10px 15px; gap: 8px; }
-        .control-btn { width: 38px !important; height: 38px !important; flex-shrink: 0; }
+        .top-controls { display: flex; justify-content: space-between; padding: 10px 15px; gap: 8px; position: relative; z-index: 10; }
+        .control-btn { width: 38px !important; height: 38px !important; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--steel); border-radius: 8px; color: white; }
         .control-btn svg { width: 18px !important; height: 18px !important; }
 
         #floating-donate {
@@ -156,7 +150,7 @@
         .qr-container { text-align: center; margin: 15px 0; }
         .qr-container img { border: 5px solid white; border-radius: 10px; width: 160px; }
         .address-box { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 0.6rem; word-break: break-all; border: 1px solid rgba(0,212,255,0.2); margin-bottom: 15px; color: #00f2ff; }
-        .event-monitor { position: absolute; bottom: 270px; width: 85%; height: 60px; background: rgba(0, 212, 255, 0.03); border-left: 2px solid var(--cyan); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 5px 10px; pointer-events: none; mask-image: linear-gradient(to bottom, transparent, black 40%); }
+        .event-monitor { position: absolute; bottom: 270px; left: 7.5%; width: 85%; height: 60px; background: rgba(0, 212, 255, 0.03); border-left: 2px solid var(--cyan); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 5px 10px; pointer-events: none; mask-image: linear-gradient(to bottom, transparent, black 40%); }
         .log-entry { font-size: 0.65rem; color: var(--cyan); margin: 2px 0; animation: logSlide 0.3s ease-out forwards; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         @keyframes logSlide { from { transform: translateX(-10px); opacity: 0; } to { transform: translateX(0); opacity: 0.8; } }
         .chat-container { display: flex; flex-direction: column; height: 100%; }
@@ -173,6 +167,7 @@
 </head>
 <body>
     <div id="vignette" class="vignette-effect"></div>
+    
     <div id="floating-vpn" onclick="openVpnApp()"><span class="floating-label">NEXUS<br>VPN</span></div>
     <div id="floating-donate" onclick="handleDonate()"><span class="floating-label">USDT<br>DONATE</span></div>
 
@@ -192,48 +187,43 @@
             </div>
         </div>
 
-      <div class="metal-background">
-    <div class="vignette-effect"></div>
-    
-    <div class="main-app-container">
-        
-        <div class="header-section">
-            <div id="user-name" style="color: #00f2ff; font-weight: bold; margin-bottom: 5px;">Загрузка...</div>
-            <div id="rank-badge" class="rank-label">RANK: ROOKIE</div>
-            <div id="balance-value">0</div>
-            <div id="protocol-text" class="protocol-status">NEX</div>
-        </div>
-        
-        <div class="click-area" id="touch-zone">
-            <div class="nexus-button" id="coin-visual">
-                <span class="nexus-symbol">N</span>
-            </div>
-        </div>
-
-        <div id="event-log-container" class="event-monitor"></div>
-
-        <div class="bottom-ui">
-            <div class="stat-row">
-                <div class="label-with-icon">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 10V3L4 14H11V21L20 10H13Z"/></svg>
-                    <span id="lbl-energy">ENERGY</span>
-                </div>
-                <div class="bar-bg"><div id="energy-fill" class="fill-orange"></div></div>
+        <div class="main-app-container">
+            <div class="header-section">
+                <div id="user-name" style="color: #00f2ff; font-weight: bold; margin-bottom: 5px;">Загрузка...</div>
+                <div id="rank-badge" class="rank-label">RANK: ROOKIE</div>
+                <div id="balance-value">0</div>
+                <div id="protocol-text" class="protocol-status">NEX</div>
             </div>
             
-            <div class="stat-row">
-                <div class="label-with-icon">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
-                    <span id="lbl-sync">OVERDRIVE</span>
+            <div class="click-area" id="touch-zone">
+                <div class="nexus-button" id="coin-visual">
+                    <span class="nexus-symbol">N</span>
                 </div>
-                <div class="bar-bg"><div id="boost-fill" class="fill-cyan"></div></div>
             </div>
-            
-            <div id="od-btn" class="sync-btn" onclick="activateOverdrive()">LOADING 0%</div>
+
+            <div id="event-log-container" class="event-monitor"></div>
+
+            <div class="bottom-ui">
+                <div class="stat-row">
+                    <div class="label-with-icon">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 10V3L4 14H11V21L20 10H13Z"/></svg>
+                        <span id="lbl-energy">ENERGY</span>
+                    </div>
+                    <div class="bar-bg"><div id="energy-fill" class="fill-orange"></div></div>
+                </div>
+                
+                <div class="stat-row">
+                    <div class="label-with-icon">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
+                        <span id="lbl-sync">OVERDRIVE</span>
+                    </div>
+                    <div class="bar-bg"><div id="boost-fill" class="fill-cyan"></div></div>
+                </div>
+                
+                <div id="od-btn" class="sync-btn" onclick="activateOverdrive()">LOADING 0%</div>
+            </div>
         </div>
 
-    </div> <div class="nav-bar">...Ваше меню...</div>
-</div>
         <div id="roadmap-modal" class="modal-overlay">
             <div class="modal-content full-modal">
                 <h2 id="m-roadmap-title" style="color: #f1c40f;">NEXUS ROADMAP</h2>
@@ -285,30 +275,25 @@
         </div>
 
         <div id="settings-modal" class="modal-overlay">
-    <div class="modal-content">
-        <h2 id="m-sys-title">SYSTEM</h2>
-        
-        <div class="setting-row">
-            <span id="lbl-lang">LANGUAGE</span>
-            <button class="nexus-btn-small" id="lang-btn" onclick="changeLanguage()">EN</button>
+            <div class="modal-content">
+                <h2 id="m-sys-title">SYSTEM</h2>
+                <div class="setting-row">
+                    <span id="lbl-lang">LANGUAGE</span>
+                    <button class="nexus-btn-small" id="lang-btn" onclick="changeLanguage()">EN</button>
+                </div>
+                <div class="setting-row">
+                    <span id="lbl-haptic">VIBRATION</span>
+                    <button class="nexus-btn-small" id="haptic-btn" onclick="toggleHaptic()">ON</button>
+                </div>
+                <div class="setting-row" style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                    <span id="lbl-desktop-title" style="font-size: 0.7rem; color: #00d4ff; font-weight: bold;">DESKTOP PC</span>
+                    <button class="nexus-btn-small" onclick="generateSyncCode()" style="background: linear-gradient(135deg, #00d4ff 0%, #008fb3 100%); width: auto; padding: 0 12px; border: none;">
+                        <span id="lbl-sync-pc" style="color: #ffffff; font-weight: bold;">SYNC CODE</span>
+                    </button>
+                </div>
+                <button class="close-btn-nexus" onclick="toggleModal('settings-modal')" style="margin-top: 20px;">CLOSE</button>
+            </div>
         </div>
-        
-        <div class="setting-row">
-            <span id="lbl-haptic">VIBRATION</span>
-            <button class="nexus-btn-small" id="haptic-btn" onclick="toggleHaptic()">ON</button>
-        </div>
-
-       <div class="setting-row" style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
-    <span id="lbl-desktop-title" style="font-size: 0.7rem; color: #00d4ff; font-weight: bold;">DESKTOP PC</span>
-    
-    <button class="nexus-btn-small" onclick="generateSyncCode()" style="background: linear-gradient(135deg, #00d4ff 0%, #008fb3 100%); width: auto; padding: 0 12px; border: none; box-shadow: none;">
-        <span id="lbl-sync-pc" style="color: #ffffff; font-weight: bold;">SYNC CODE</span>
-    </button>
-</div>
-
-        <button class="close-btn-nexus" onclick="toggleModal('settings-modal')" style="margin-top: 20px;">CLOSE</button>
-    </div>
-</div>
 
         <nav class="nav-bar">
             <div class="nav-item active" id="nav-mining" onclick="location.reload()">
