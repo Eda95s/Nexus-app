@@ -452,37 +452,61 @@ window.deleteMsg = function(id) {
     };
 
     // --- ТАЧ-ЛОГИКА ---
-    const touchZone = document.getElementById('touch-zone');
-    if (touchZone) {
-        touchZone.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (energy < 2) return;
-            NexusGuard.lastClickTime = Date.now();
-            const coin = document.getElementById('coin-visual');
-            if(coin) coin.classList.add('pressed');
-            const now = Date.now();
-            const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                let t = e.changedTouches[i];
-                let pwr = (upgrades.node.lvl * currentMult) * (isOverdrive ? 5 : 1);
-                if (Math.random() < 0.01) pwr *= 10;
-                
-                Core.modifyBalance(pwr); 
-                Core.consumeEnergy(2);
-                
-                accumulatedClicks += pwr;
+   // --- УНИВЕРСАЛЬНАЯ ТАЧ/МЫШЬ ЛОГИКА ---
+const touchZone = document.getElementById('touch-zone');
+if (touchZone) {
+    // Выносим общую функцию клика, чтобы не дублировать код
+    const handleMining = (e) => {
+        // Проверяем: если это тач, берем массив пальцев, если мышь - создаем массив из одного события
+        const points = e.changedTouches ? e.changedTouches : [e];
+        
+        if (energy < 2) return;
 
-                if (!isOverdrive && odCharge < 100) odCharge += 0.4;
-                createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
-                spawnParticles(t.clientX, t.clientY);
-            }
-            if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
-        }, {passive: false});
-        touchZone.addEventListener('touchend', () => {
-            document.getElementById('coin-visual')?.classList.remove('pressed');
-        });
-    }
+        NexusGuard.lastClickTime = Date.now();
+        const coin = document.getElementById('coin-visual');
+        if(coin) coin.classList.add('pressed');
 
+        const now = Date.now();
+        const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
+
+        for (let i = 0; i < points.length; i++) {
+            let t = points[i];
+            let pwr = (upgrades.node.lvl * currentMult) * (isOverdrive ? 5 : 1);
+            
+            // Шанс на крит
+            if (Math.random() < 0.01) pwr *= 10;
+            
+            Core.modifyBalance(pwr); 
+            Core.consumeEnergy(2);
+            accumulatedClicks += pwr;
+
+            if (!isOverdrive && odCharge < 100) odCharge += 0.4;
+            
+            // Координаты (clientX/Y работают и для мыши, и для тача)
+            createPop(t.clientX, t.clientY, pwr, pwr > upgrades.node.lvl * 2);
+            spawnParticles(t.clientX, t.clientY);
+        }
+
+        if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+    };
+
+    // Слушаем смартфоны
+    touchZone.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Блокируем зум и прокрутку при клике
+        handleMining(e);
+    }, {passive: false});
+
+    // Слушаем ПК (Мышь)
+    touchZone.addEventListener('mousedown', (e) => {
+        // Срабатывает только на левую кнопку мыши
+        if (e.button === 0) handleMining(e);
+    });
+
+    // Убираем эффект нажатия (для всех)
+    const releaseCoin = () => document.getElementById('coin-visual')?.classList.remove('pressed');
+    touchZone.addEventListener('touchend', releaseCoin);
+    window.addEventListener('mouseup', releaseCoin);
+}
     // --- ЗАДАНИЯ ---
     function renderTasks() {
         const L = langMap[currentLang];
