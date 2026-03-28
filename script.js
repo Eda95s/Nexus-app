@@ -1042,5 +1042,13 @@ window.saveData = function() {
         updateUI(); 
         NexusEvent.log("System Online.", "Система онлайн.");
     });
-
+// Каждую секунду проверяем: если уровень куплен — начисляем чуть-чуть
+setInterval(() => {
+    if (upgrades && upgrades.vpn && upgrades.vpn.lvl > 0) {
+        // Доход в секунду (например, 2 монеты за уровень в секунду)
+        const perSecond = (upgrades.vpn.lvl * 2); 
+        balance += perSecond;
+        updateUI(); // Сразу обновляем цифру на экране
+    }
+}, 1000);
 })();
