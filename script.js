@@ -26,6 +26,18 @@ window.deleteMsg = function(id) {
     tg.expand();
     const user = tg.initDataUnsafe?.user;
 
+    // === ВОТ СЮДА ВСТАВЛЯЕМ БЛОК АНТИ-ВАСЯ ===
+    const savedId = localStorage.getItem('nexus_user_id');
+    if (user && user.id) {
+        // Если ID в памяти телефона (savedId) не совпадает с текущим ID из Телеграм
+        if (savedId && savedId !== String(user.id)) {
+            console.log("⚠️ Обнаружена смена аккаунта! Очистка данных старого пользователя...");
+            localStorage.clear(); // Полностью стираем кэш (баланс, имя, апгрейды Васи)
+        }
+        // Запоминаем новый ID, чтобы в следующий раз не стирать
+        localStorage.setItem('nexus_user_id', user.id);
+    }
+
     // ==========================================
     // КОНФИГУРАЦИЯ
     // ==========================================
