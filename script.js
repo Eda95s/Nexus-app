@@ -26,15 +26,18 @@ window.deleteMsg = function(id) {
     tg.expand();
     const user = tg.initDataUnsafe?.user;
 
-    // === ВОТ СЮДА ВСТАВЛЯЕМ БЛОК АНТИ-ВАСЯ ===
+    // ПРОВЕРКА СМЕНЫ АККАУНТА (Очистка призраков прошлого)
     const savedId = localStorage.getItem('nexus_user_id');
     if (user && user.id) {
-        // Если ID в памяти телефона (savedId) не совпадает с текущим ID из Телеграм
         if (savedId && savedId !== String(user.id)) {
-            console.log("⚠️ Обнаружена смена аккаунта! Очистка данных старого пользователя...");
-            localStorage.clear(); // Полностью стираем кэш (баланс, имя, апгрейды Васи)
+            console.warn("⚠️ Смена аккаунта! Полная очистка...");
+            localStorage.clear();
+            // Принудительно ставим нули, чтобы не подтянулись старые цифры
+            balance = 0;
+            energy = 1000;
+            upgrades = {};
+            tasksDone = {};
         }
-        // Запоминаем новый ID, чтобы в следующий раз не стирать
         localStorage.setItem('nexus_user_id', user.id);
     }
 
@@ -101,50 +104,38 @@ window.deleteMsg = function(id) {
     const userId = user?.id || "unknown"; 
 
     // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ ---
-   async function syncWithServer() {
-        // Берем РЕАЛЬНОГО пользователя. Никаких заглушек "test_user"!
-        const currentUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        
-        if (!currentUser || !currentUser.id) {
-            console.error("Критическая ошибка: Данные пользователя Telegram не найдены!");
-            return; 
-        }
-        
-        // Если есть клики, отправляем их
-        if (accumulatedClicks > 0) {
-            console.log("Отправка кликов на сервер для ID:", currentUser.id);
-            try {
-                const response = await fetch(`${API_URL}/api/click`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    mode: 'cors', 
-                    body: JSON.stringify({
-                        userId: String(currentUser.id),
-                        name: currentUser.first_name,
-                        clicks: accumulatedClicks
-                    })
-                });
+  async function syncWithServer() {
+    // Только реальный юзер из ТГ
+    const currentUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    
+    if (!currentUser || !currentUser.id) return;
 
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Если сервер прислал баланс — обновляем
-                    if (data && typeof data.balance !== 'undefined') {
-                        balance = data.balance;
-                        accumulatedClicks = 0;
-                        updateUI();
-                        
-                        // Сохраняем актуальный ID в локал сторадж для проверки "анти-вася"
-                        localStorage.setItem('nexus_user_id', currentUser.id);
-                    }
-                } else {
-                    console.error("Сервер ответил ошибкой:", response.status);
+    if (accumulatedClicks > 0) {
+        try {
+            const response = await fetch(`${API_URL}/api/click`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                mode: 'cors', 
+                body: JSON.stringify({
+                    userId: String(currentUser.id),
+                    name: currentUser.first_name,
+                    clicks: accumulatedClicks
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.balance !== undefined) {
+                    balance = data.balance;
+                    accumulatedClicks = 0;
+                    updateUI();
                 }
-            } catch (e) {
-                console.error("Ошибка сети при синхронизации:", e);
             }
+        } catch (e) {
+            console.error("API Sync Error:", e);
         }
     }
+}
     // --- EVENT LOG ---
     const NexusEvent = {
         log: function(msgEn, msgRu) {
@@ -760,49 +751,41 @@ window.deleteMsg = function(id) {
     };
 
 window.saveData = function() {
-    // 1. Сохраняем локально
+    // 1. Локальное сохранение
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
     localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
     localStorage.setItem('nexus_last_time', Date.now());
-    localStorage.setItem('nexus_version', GAME_VERSION);
     localStorage.setItem('nexus_energy', energy);
-    localStorage.setItem('nexus_daily', lastDailyClaim);
-    localStorage.setItem('nexus_streak', dailyStreak);
 
-    // 2. В Firebase отправляем через транзакцию
+    // 2. Firebase Транзакция
     if (typeof db !== 'undefined' && user?.id) {
         db.ref('users/' + user.id).transaction((currentData) => {
-            // ИСПРАВЛЕНИЕ: Если юзера нет в базе (null), создаем начальный объект
+            // Если в базе пусто (НОВЫЙ ЮЗЕР), создаем ему профиль
             if (currentData === null) {
                 return {
                     balance: Math.floor(balance),
                     name: user.first_name || "Explorer",
                     v: GAME_VERSION,
-                    id: user.id
+                    id: user.id,
+                    last_seen: firebase.database.ServerValue.TIMESTAMP
                 };
             }
 
-            // Если юзер уже есть в базе:
-            // Проверяем, не намайнил ли он больше в Android-приложении
+            // Если данные есть, синхронизируем баланс с тем, что могло прийти из Android
             if (currentData.balance > balance) {
                 balance = currentData.balance;
             }
             
-            // Обновляем данные
             currentData.balance = Math.floor(balance);
-            currentData.v = GAME_VERSION;
             currentData.name = user.first_name || currentData.name;
+            currentData.v = GAME_VERSION;
             
             return currentData;
         }, (error, committed, snapshot) => {
             if (committed) {
                 updateUI();
-                console.log("✅ Синхронизация успешна:", snapshot.val().balance);
-            }
-            if (error) {
-                console.error("❌ Ошибка транзакции:", error);
             }
         });
     }
