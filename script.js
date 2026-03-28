@@ -398,7 +398,14 @@ window.deleteMsg = function(id) {
         updateRank();
         const L = langMap[currentLang];
         const nameBox = document.getElementById('user-name');
-        if (nameBox && user) nameBox.innerText = `NEX | ${user.first_name.toUpperCase()}`;
+        if (nameBox) {
+            // Собираем полное имя из Telegram
+            const fullName = user?.first_name 
+                ? (user.first_name + (user.last_name ? " " + user.last_name : "")) 
+                : (localStorage.getItem('nexus_user_name') || 'MINER');
+            
+            nameBox.innerText = `NEX | ${fullName.toUpperCase()}`;
+        }
         
         document.getElementById('nav-mining').querySelector('span').innerText = L.mining;
         document.getElementById('nav-market').querySelector('span').innerText = L.market;
