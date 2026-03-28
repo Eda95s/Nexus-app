@@ -1019,9 +1019,37 @@ window.deleteMsg = function(id) {
         
         // syncWithServer(); <--- ЭТУ СТРОКУ Я УДАЛИЛ, ОНА БОЛЬШЕ НЕ НУЖНА
         
-       updateUI(); 
+      // ... (весь твой код выше) ...
+        
+        updateUI(); 
         NexusEvent.log("System Online.", "Система онлайн.");
 
-    }); // Закрывает DOMContentLoaded
+    }); // КОНЕЦ DOMContentLoaded
 
-})(); // Закрывает весь скрипт (function() { ... })()
+    // ВЫНОСИМ ФУНКЦИЮ НАРУЖУ (чтобы точно работала на смартфоне)
+    window.selectMode = function(mode) {
+        console.log("Переключение режима на:", mode);
+
+        if (mode === 'VPN' || mode === 'vpn') {
+            if (window.Android && window.Android.openVpnInterface) {
+                if (typeof saveData === 'function') saveData(); 
+                window.Android.openVpnInterface();
+            }
+        }
+
+        const sections = document.querySelectorAll('.app-section');
+        sections.forEach(s => s.style.display = 'none');
+        
+        const activeSection = document.getElementById('section-' + mode.toLowerCase());
+        if (activeSection) activeSection.style.display = 'flex';
+
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(i => {
+            i.classList.remove('active');
+            if (i.getAttribute('onclick') && i.getAttribute('onclick').includes(mode)) {
+                i.classList.add('active');
+            }
+        });
+    };
+
+})(); // ФИНАЛЬНОЕ ЗАКРЫТИЕ ФАЙЛА
