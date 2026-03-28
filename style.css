@@ -30,6 +30,24 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
     border-left: 1px solid var(--steel); 
     border-right: 1px solid var(--steel);
 }
+.main-app-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Расталкивает элементы к верху и низу */
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    padding: 20px 15px 100px 15px; /* 100px снизу дают место под меню */
+    box-sizing: border-box;
+}
+
+/* Убедись, что click-area забирает всё свободное место в центре */
+.click-area {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 /* Кнопки управления */
 .top-controls { 
     display: flex;
