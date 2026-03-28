@@ -47,42 +47,44 @@ window.deleteMsg = function(id) {
     checkFirebase();
 
     // --- ВСТАВЛЯЙ СЮДА ---
-    function syncUserWithDb() {
-        if (!user || !user.id) return;
+   function syncUserWithDb() {
+    if (!user || !user.id) return;
 
-        const myId = user.id.toString();
-        // Собираем имя из Telegram
-        const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
-        const userRef = db.ref('users/' + myId);
+    const myId = user.id.toString();
+    const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
+    const userRef = db.ref('users/' + myId);
 
-        userRef.once('value', (snapshot) => {
-            const data = snapshot.val();
-            
-            if (!data) {
-                // Если юзера нет в базе - создаем
-                userRef.set({
-                    username: fullName,
-                    name: fullName,
-                    balance: 0,
-                    lastLogin: Date.now(),
-                    v: GAME_VERSION
-                });
-            } else {
-                // Если юзер есть - ПРИНУДИТЕЛЬНО обновляем имя
-                // Это удалит "Васю" из твоей записи
-                userRef.update({
-                    username: fullName,
-                    name: fullName,
-                    lastLogin: Date.now(),
-                    v: GAME_VERSION
-                });
-            }
-            // Сохраняем и в локальную память для быстрой отрисовки
-            localStorage.setItem('nexus_user_name', fullName);
-        });
-    }
-    // Вызываем синхронизацию сразу после объявления
-    syncUserWithDb();
+    userRef.once('value', (snapshot) => {
+        const data = snapshot.val();
+        
+        if (!data) {
+            // --- НОВЫЙ ПОЛЬЗОВАТЕЛЬ: Создаем полный набор данных ---
+            userRef.set({
+                username: fullName,
+                name: fullName,
+                balance: 0,
+                energy: 1000,        // Начальная энергия
+                lastLogin: Date.now(),
+                v: GAME_VERSION,
+                // Добавляем уровни прокачки, чтобы майнинг в VPN не выдавал NaN
+                upgrades: {
+                    node: { lvl: 1, cost: 45000, power: 1 },
+                    vpn: { lvl: 1, cost: 50000, income: 1 } 
+                }
+            });
+        } else {
+            // --- СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ: Обновляем только имя и версию ---
+            userRef.update({
+                username: fullName,
+                name: fullName,
+                lastLogin: Date.now(),
+                v: GAME_VERSION
+            });
+        }
+        localStorage.setItem('nexus_user_name', fullName);
+    });
+}
+syncUserWithDb();
     
     function checkVersionReset() {
         const savedVersion = localStorage.getItem('nexus_version');
