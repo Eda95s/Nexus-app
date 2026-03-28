@@ -15,21 +15,31 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 .overdrive-active .vignette-effect { box-shadow: inset 0 0 150px rgba(255, 0, 0, 0.8); animation: pulseRed 1s infinite; }
 @keyframes pulseRed { 50% { box-shadow: inset 0 0 200px rgba(255, 0, 0, 1); } }
 
-.metal-background { width: 100%; height: 100vh; background: radial-gradient(circle at center, #0a162f 0%, #000 100%); display: flex; flex-direction: column; align-items: center; }
-
+.metal-background { 
+    width: 100%; 
+    max-width: 480px; /* Делаем экран как у телефона */
+    height: 100vh; 
+    margin: 0 auto;  /* Центрируем на мониторе ПК */
+    background: radial-gradient(circle at center, #0a162f 0%, #000 100%); 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: space-between; /* ЭТОТ ПАРАМЕТР раздвинет верх и низ */
+    align-items: center; 
+    position: relative;
+    overflow: hidden;
+    border-left: 1px solid var(--steel); 
+    border-right: 1px solid var(--steel);
+}
 /* Кнопки управления */
 .top-controls { 
-    position: absolute; 
-    top: 25px; 
-    left: 0;
-    right: 0;
     display: flex;
     justify-content: space-around;
     align-items: center;
-    padding: 0 20px;
+    padding: 20px 0; /* Просто отступ */
     width: 100%;
     box-sizing: border-box;
     z-index: 100;
+    /* УБРАЛИ position: absolute и привязку к top */
 }
 
 .top-controls .control-btn:nth-child(2) {
@@ -74,7 +84,11 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
     font-size: 10px;
 }
 
-.header-section { margin-top: 100px; text-align: center; }
+.header-section { 
+    margin-top: 10px; 
+    text-align: center; 
+    width: 100%;
+}
 
 #balance-value { font-size: 3.8rem; font-weight: 900; text-shadow: 0 0 25px var(--cyan); letter-spacing: -2px; }
 .rank-label { 
@@ -88,6 +102,22 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 /* ==================================================== */
 /* ДИНАМИЧЕСКАЯ КНОПКА МАЙНИНГА (ВИЗУАЛ РАНГОВ)         */
 /* ==================================================== */
+#touch-zone {
+    flex-grow: 1; /* Заставляет этот блок забрать всё пустое место в центре */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Саму монету немного ограничим, чтобы на ПК не была гигантской */
+.nexus-button { 
+    width: 65vw; 
+    height: 65vw; 
+    max-width: 280px; /* Максимум на ПК */
+    max-height: 280px;
+    /* ... остальные твои стили оставляй как есть ... */
+}
 .nexus-button { 
     width: 250px; height: 250px; border-radius: 50%; 
     background: radial-gradient(circle, var(--bg-inner, #1a2a4a) 0%, var(--bg-outer, #050a14) 100%);
@@ -132,7 +162,12 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
     50% { box-shadow: 0 0 70px var(--btn-glow-active); border-color: var(--btn-border-active); }
 }
 
-.bottom-ui { position: absolute; bottom: 100px; width: 85%; }
+.bottom-ui { 
+    width: 85%; 
+    margin-bottom: 90px; /* Отступ от нижнего меню */
+    z-index: 10;
+    /* УБРАЛИ position: absolute и bottom */
+}
 .label-with-icon { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: var(--cyan); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
 .bar-bg { width: 100%; height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 15px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
 #energy-fill { background: linear-gradient(90deg, #ff8800, #ffcc00); height: 100%; transition: 0.2s; box-shadow: 0 0 15px #ff8800; }
