@@ -788,8 +788,8 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
         }
     };
 
- window.saveData = function() {
-    // 1. Сохраняем локально (для подстраховки)
+window.saveData = function() {
+    // 1. Сохраняем локально
     localStorage.setItem('nexus_bal', balance);
     localStorage.setItem('nexus_upgrades', JSON.stringify(upgrades));
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
@@ -800,30 +800,53 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
     localStorage.setItem('nexus_daily', lastDailyClaim);
     localStorage.setItem('nexus_streak', dailyStreak);
 
-    // 2. В Firebase отправляем через транзакцию с ПРОВЕРКОЙ
+    // 2. Работа с Firebase
     if (typeof db !== 'undefined' && user?.id) {
         db.ref('users/' + user.id).transaction((currentData) => {
-            if (currentData === null) return currentData; 
+            
+            // ЕСЛИ ДАННЫХ НЕТ (Новый юзер) - создаем начальный объект
+            if (currentData === null) {
+                const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
+                return {
+                    balance: Math.floor(balance),
+                    energy: energy || 1000,
+                    name: fullName,
+                    username: fullName,
+                    v: GAME_VERSION,
+                    upgrades: upgrades || {
+                        node: { lvl: 1, cost: 45000, power: 1 },
+                        vpn: { lvl: 1, cost: 50000, income: 1 }
+                    },
+                    lastLogin: Date.now()
+                };
+            }
 
-            // Если в базе уже больше (намайнил VPN в Android), 
-            // забираем это значение в кликер
+            // ЕСЛИ ДАННЫЕ ЕСТЬ - СИНХРОНИЗИРУЕМ
+            // Проверяем, не намайнил ли VPN больше, пока кликер был выключен
             if (currentData.balance > balance) {
                 balance = currentData.balance;
             }
             
-            // Записываем только ЦЕЛОЕ число (Math.floor)
+            // Обновляем поля
             currentData.balance = Math.floor(balance);
+            currentData.energy = energy;
             currentData.v = GAME_VERSION;
+            
             const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
             currentData.name = fullName;
-            currentData.username = fullName; // Чтобы оба поля в базе стали одинаковыми
+            currentData.username = fullName;
+            currentData.lastLogin = Date.now();
             
+            // Важно: сохраняем уровни апгрейдов в базу, чтобы VPN их видел
+            currentData.upgrades = upgrades;
+
             return currentData;
         }, (error, committed, snapshot) => {
-            // ВАЖНО: Если запись прошла успешно, сразу обновляем UI
             if (committed) {
                 updateUI();
-                console.log("✅ Синхронизация успешна:", snapshot.val().balance);
+                console.log("✅ База обновлена. Баланс:", snapshot.val().balance);
+            } else if (error) {
+                console.error("❌ Ошибка транзакции:", error);
             }
         });
     }
