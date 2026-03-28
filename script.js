@@ -45,6 +45,44 @@ window.deleteMsg = function(id) {
         });
     }
     checkFirebase();
+
+    // --- ВСТАВЛЯЙ СЮДА ---
+    function syncUserWithDb() {
+        if (!user || !user.id) return;
+
+        const myId = user.id.toString();
+        // Собираем имя из Telegram
+        const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
+        const userRef = db.ref('users/' + myId);
+
+        userRef.once('value', (snapshot) => {
+            const data = snapshot.val();
+            
+            if (!data) {
+                // Если юзера нет в базе - создаем
+                userRef.set({
+                    username: fullName,
+                    name: fullName,
+                    balance: 0,
+                    lastLogin: Date.now(),
+                    v: GAME_VERSION
+                });
+            } else {
+                // Если юзер есть - ПРИНУДИТЕЛЬНО обновляем имя
+                // Это удалит "Васю" из твоей записи
+                userRef.update({
+                    username: fullName,
+                    name: fullName,
+                    lastLogin: Date.now(),
+                    v: GAME_VERSION
+                });
+            }
+            // Сохраняем и в локальную память для быстрой отрисовки
+            localStorage.setItem('nexus_user_name', fullName);
+        });
+    }
+    // Вызываем синхронизацию сразу после объявления
+    syncUserWithDb();
     
     function checkVersionReset() {
         const savedVersion = localStorage.getItem('nexus_version');
