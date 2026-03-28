@@ -805,7 +805,9 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
             // Записываем только ЦЕЛОЕ число (Math.floor)
             currentData.balance = Math.floor(balance);
             currentData.v = GAME_VERSION;
-            currentData.name = user.first_name;
+            const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
+            currentData.name = fullName;
+            currentData.username = fullName; // Чтобы оба поля в базе стали одинаковыми
             
             return currentData;
         }, (error, committed, snapshot) => {
