@@ -579,15 +579,23 @@ if (touchZone) {
 
         if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
     };
+// Переменная-флаг, чтобы отличать тач от мыши
+    let isTouch = false;
 
     // Слушаем смартфоны
     touchZone.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // Блокируем зум и прокрутку при клике
+        isTouch = true; // Фиксируем, что это тач
+        e.preventDefault(); // Блокируем стандартное поведение (зум/скролл)
         handleMining(e);
     }, {passive: false});
 
     // Слушаем ПК (Мышь)
     touchZone.addEventListener('mousedown', (e) => {
+        // Если это был тач (isTouch === true), игнорируем mousedown
+        if (isTouch) {
+            isTouch = false; // Сбрасываем для следующего раза
+            return;
+        }
         // Срабатывает только на левую кнопку мыши
         if (e.button === 0) handleMining(e);
     });
@@ -1042,13 +1050,4 @@ window.saveData = function() {
         updateUI(); 
         NexusEvent.log("System Online.", "Система онлайн.");
     });
-// Каждую секунду проверяем: если уровень куплен — начисляем чуть-чуть
-setInterval(() => {
-    if (upgrades && upgrades.vpn && upgrades.vpn.lvl > 0) {
-        // Доход в секунду (например, 2 монеты за уровень в секунду)
-        const perSecond = (upgrades.vpn.lvl * 2); 
-        balance += perSecond;
-        updateUI(); // Сразу обновляем цифру на экране
-    }
-}, 1000);
 })();
