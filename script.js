@@ -170,38 +170,56 @@ window.deleteMsg = function(id) {
     };
 
     function initChatSync() {
-        const onlineRef = db.ref('online_count');
-        const myId = (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) 
-                     ? window.Telegram.WebApp.initDataUnsafe.user.id.toString() 
-                     : 'guest_' + Math.floor(Math.random() * 1000000);
+    if (typeof db === 'undefined') return; // Переместил проверку наверх для безопасности
 
-        const myPresence = onlineRef.child(myId);
-        myPresence.set(true);
-        myPresence.onDisconnect().remove();
+    const onlineRef = db.ref('online_count');
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user; // Берем данные юзера
+    const myId = tgUser 
+                 ? tgUser.id.toString() 
+                 : 'guest_' + Math.floor(Math.random() * 1000000);
 
-        onlineRef.on('value', (snap) => {
-            const count = snap.numChildren() || 0;
-            const onlineEl = document.getElementById('online-status');
-            if (onlineEl) onlineEl.innerText = `ONLINE: ${count}`;
+    // --- БЛОК ОБНОВЛЕНИЯ ИМЕНИ (ИЗБАВЛЯЕМСЯ ОТ ВАСИ) ---
+    if (tgUser) {
+        const fullName = tgUser.first_name + (tgUser.last_name ? " " + tgUser.last_name : "");
+        
+        // 1. Обновляем в локальной памяти браузера
+        localStorage.setItem('nexus_user_name', fullName);
+        
+        // 2. Обновляем в глобальной переменной (если она есть в script.js)
+        if (typeof userName !== 'undefined') userName = fullName;
+
+        // 3. Обновляем в базе данных Firebase
+        db.ref('users/' + myId).update({
+            username: fullName
         });
+    }
+    // ---------------------------------------------------
 
-        if(typeof db === 'undefined') return;
+    const myPresence = onlineRef.child(myId);
+    myPresence.set(true);
+    myPresence.onDisconnect().remove();
 
-        db.ref('chat').limitToLast(20).on('value', (snap) => {
-            const container = document.getElementById('chat-messages');
-            if(!container) return;
-            container.innerHTML = '';
-            
-            snap.forEach(child => {
-                const m = child.val();
-                let userRank = RANKS[0].name;
-                for (let i = RANKS.length - 1; i >= 0; i--) {
-                    if ((m.balance || 0) >= RANKS[i].limit) {
-                        userRank = RANKS[i].name;
-                        break;
-                    }
+    onlineRef.on('value', (snap) => {
+        const count = snap.numChildren() || 0;
+        const onlineEl = document.getElementById('online-status');
+        if (onlineEl) onlineEl.innerText = `ONLINE: ${count}`;
+    });
+
+    db.ref('chat').limitToLast(20).on('value', (snap) => {
+        const container = document.getElementById('chat-messages');
+        if(!container) return;
+        container.innerHTML = '';
+        
+        snap.forEach(child => {
+            const m = child.val();
+            let userRank = RANKS[0].name;
+            for (let i = RANKS.length - 1; i >= 0; i--) {
+                if ((m.balance || 0) >= RANKS[i].limit) {
+                    userRank = RANKS[i].name;
+                    break;
                 }
-
+            }
+            // ... тут твой остальной код отрисовки сообщений ...
                 container.innerHTML += `
                     <div class="chat-msg" style="margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
                         <div style="display: flex; gap: 8px; align-items: center;">
