@@ -136,38 +136,48 @@ window.deleteMsg = function(id) {
     };
 
     // --- REALTIME CHAT ---
-    window.sendMessage = function() {
-        const input = document.getElementById('chat-input');
-        if(!input || typeof db === 'undefined') return;
-        
-        const text = input.value.trim();
-        if(!text) return;
+   window.sendMessage = function() {
+    const input = document.getElementById('chat-input');
+    if(!input || typeof db === 'undefined') return;
+    
+    const text = input.value.trim();
+    if(!text) return;
 
-        const now = Date.now();
-        if (now - lastMessageTime < 5000) {
-            const secondsLeft = Math.ceil((5000 - (now - lastMessageTime)) / 1000);
-            tg.showAlert(`Подождите ${secondsLeft} сек. перед отправкой!`);
-            return;
-        }
+    const now = Date.now();
+    // Проверка lastMessageTime (убедись, что она объявлена в начале script.js как let lastMessageTime = 0)
+    if (typeof lastMessageTime !== 'undefined' && now - lastMessageTime < 5000) {
+        const secondsLeft = Math.ceil((5000 - (now - lastMessageTime)) / 1000);
+        tg.showAlert(`Подождите ${secondsLeft} сек. перед отправкой!`);
+        return;
+    }
 
-        if (text.length > 100) {
-            tg.showAlert("Сообщение слишком длинное!");
-            return;
-        }
+    if (text.length > 100) {
+        tg.showAlert("Сообщение слишком длинное!");
+        return;
+    }
 
-        const msgData = {
-            userId: user?.id || 0,
-            name: user?.first_name || 'Anon',
-            text: text,
-            time: now,
-            balance: balance
-        };
-
-        db.ref('chat').push(msgData);
-        input.value = '';
-        lastMessageTime = now;
-        if(hapticEnabled) tg.HapticFeedback.impactOccurred('light');
+    // --- НАДЕЖНОЕ ПОЛУЧЕНИЕ ДАННЫХ ЮЗЕРА ---
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    
+    const msgData = {
+        userId: tgUser ? tgUser.id : 0,
+        // Берем имя из ТГ, если нет — из памяти, если нет — Anon
+        name: tgUser ? (tgUser.first_name + (tgUser.last_name ? " " + tgUser.last_name : "")) : (localStorage.getItem('nexus_user_name') || 'Anon'),
+        text: text,
+        time: now,
+        // Убедись, что переменная balance доступна здесь
+        balance: typeof balance !== 'undefined' ? balance : 0
     };
+
+    db.ref('chat').push(msgData);
+    
+    input.value = '';
+    lastMessageTime = now;
+    
+    if(typeof hapticEnabled !== 'undefined' && hapticEnabled) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+};
 
     function initChatSync() {
     if (typeof db === 'undefined') return; // Переместил проверку наверх для безопасности
