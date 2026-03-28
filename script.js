@@ -101,11 +101,18 @@ window.deleteMsg = function(id) {
     const userId = user?.id || "unknown"; 
 
     // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ ---
-    async function syncWithServer() {
-        const currentUser = window.Telegram?.WebApp?.initDataUnsafe?.user || { id: "test_user", first_name: "LocalTest" };
+   async function syncWithServer() {
+        // Берем РЕАЛЬНОГО пользователя. Никаких заглушек "test_user"!
+        const currentUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
         
+        if (!currentUser || !currentUser.id) {
+            console.error("Критическая ошибка: Данные пользователя Telegram не найдены!");
+            return; 
+        }
+        
+        // Если есть клики, отправляем их
         if (accumulatedClicks > 0) {
-            console.log("Отправка кликов на сервер:", accumulatedClicks);
+            console.log("Отправка кликов на сервер для ID:", currentUser.id);
             try {
                 const response = await fetch(`${API_URL}/api/click`, {
                     method: 'POST',
@@ -120,18 +127,24 @@ window.deleteMsg = function(id) {
 
                 if (response.ok) {
                     const data = await response.json();
-                    balance = data.balance;
-                    accumulatedClicks = 0;
-                    updateUI();
+                    
+                    // Если сервер прислал баланс — обновляем
+                    if (data && typeof data.balance !== 'undefined') {
+                        balance = data.balance;
+                        accumulatedClicks = 0;
+                        updateUI();
+                        
+                        // Сохраняем актуальный ID в локал сторадж для проверки "анти-вася"
+                        localStorage.setItem('nexus_user_id', currentUser.id);
+                    }
                 } else {
                     console.error("Сервер ответил ошибкой:", response.status);
                 }
             } catch (e) {
-                console.error("Ошибка сети:", e);
+                console.error("Ошибка сети при синхронизации:", e);
             }
         }
     }
-
     // --- EVENT LOG ---
     const NexusEvent = {
         log: function(msgEn, msgRu) {
