@@ -320,19 +320,33 @@ syncUserWithDb();
             });
         },
         applyPassive: function() {
-            if (upgrades.vpn.lvl > 0) {
+            // Добавляем проверку, чтобы скрипт не падал, если апгрейдов еще нет
+            if (upgrades && upgrades.vpn && upgrades.vpn.lvl > 0) {
                 const now = Date.now();
-                const diff = Math.floor((now - lastTime) / 1000);
+                // Защита от NaN для lastTime
+                const last = lastTime || now; 
+                const diff = Math.floor((now - last) / 1000);
+                
+                // Считаем доход
                 const earned = diff * (upgrades.vpn.lvl * 2);
+                
                 if (earned > 0) {
                     balance += earned;
-                    const msg = currentLang === 'RU' ? `VPN намайнил: +${earned.toLocaleString()} N` : `VPN mined: +${earned.toLocaleString()} N`;
+                    const msg = currentLang === 'RU' ? 
+                        `VPN намайнил: +${earned.toLocaleString()} N` : 
+                        `VPN mined: +${earned.toLocaleString()} N`;
+                    
                     tg.showAlert(msg);
                     NexusEvent.log(`Passive income: +${earned}`, `Пассивный доход: +${earned}`);
+                    
+                    // После начисления обновляем UI и сохраняем
+                    updateUI();
                 }
+            } else {
+                // Если у новичка еще нет уровней в базе, ставим хотя бы 0, чтобы не было ошибки
+                console.log("Майнинг пока не активен: уровень VPN 0 или не загружен");
             }
         }
-    };
 
     const langMap = {
         EN: {
