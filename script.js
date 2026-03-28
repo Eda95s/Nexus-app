@@ -69,7 +69,7 @@ window.deleteMsg = function(id) {
                 // Добавляем уровни прокачки, чтобы майнинг в VPN не выдавал NaN
                 upgrades: {
                     node: { lvl: 1, cost: 45000, power: 1 },
-                    vpn: { lvl: 1, cost: 50000, income: 1 } 
+                    vpn: { lvl: 0, cost: 50000, income: 1 } 
                 }
             });
         } else {
@@ -103,7 +103,7 @@ syncUserWithDb();
     let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
     let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
         node: { lvl: 1, cost: 45000, power: 1 },
-        vpn: { lvl: 1, cost: 50000, income: 1 }
+        vpn: { lvl: 0, cost: 50000, income: 1 }
     };
 
     let activeBoosts = JSON.parse(localStorage.getItem('nexus_active_boosts')) || {
