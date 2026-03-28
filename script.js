@@ -134,37 +134,6 @@ window.deleteMsg = function(id) {
             setTimeout(() => entry.style.opacity = '0.3', 2000);
         }
     };
-    // --- СИСТЕМА ПРИВЯЗКИ ПК ---
-    window.generateSyncCode = async function() {
-        const tg = window.Telegram.WebApp;
-        const userId = String(tg.initDataUnsafe?.user?.id || "test_user");
-        
-        // 1. Генерируем случайный код из 6 цифр
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        try {
-            // 2. Записываем в Firebase: код -> ID пользователя
-            // Ставим время жизни кода 5 минут (чтобы не висел вечно)
-            await firebase.database().ref('sync_codes/' + code).set({
-                userId: userId,
-                expires: Date.now() + (5 * 60 * 1000) 
-            });
-
-            // 3. Выводим пользователю красивое уведомление
-            tg.showPopup({
-                title: 'Синхронизация с ПК',
-                message: `Ваш код доступа: ${code}\nВведите его в приложении на Windows.\nКод действует 5 минут.`,
-                buttons: [{type: 'ok', text: 'Понял'}]
-            });
-            
-            NexusEvent.log("Sync code generated", "Код синхронизации создан");
-            tg.HapticFeedback.notificationOccurred('success');
-
-        } catch (e) {
-            console.error("Ошибка генерации кода:", e);
-            tg.showAlert("Ошибка при создании кода. Попробуйте еще раз.");
-        }
-    };
 
     // --- REALTIME CHAT ---
     window.sendMessage = function() {
@@ -298,33 +267,27 @@ window.deleteMsg = function(id) {
     };
 
     const langMap = {
-    EN: {
-        mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
-        sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "CHARGE", ready: "READY!",
-        buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
-        task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
-        donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
-        daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "INVITE", wait: "WAIT",
-        go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!", lowBal: "NEED 100K ON BALANCE!",
-        chatTitle: "GLOBAL CHAT", chatLabel: "CHAT", chatPlace: "Enter message...", send: "SEND",
-        // Новые ключи для ПК
-        syncBtn: "SYNC CODE",
-        desktopTitle: "DESKTOP PC"
-    },
-    RU: {
-        mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
-        sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАРЯД", ready: "ГОТОВО!",
-        buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
-        task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
-        donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
-        daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "ПРИГЛАСИТЬ", wait: "ОЖИДАНИЕ",
-        go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!", lowBal: "НУЖНО 100К НА БАЛАНСЕ!",
-        chatTitle: "ОБЩИЙ ЧАТ", chatLabel: "ЧАТ", chatPlace: "Ваше сообщение...", send: "ОТПРАВИТЬ",
-        // Новые ключи для ПК
-        syncBtn: "СИНХРОНИЗАЦИЯ",
-        desktopTitle: "КОМПЬЮТЕР"
-    }
-};
+        EN: {
+            mining: "MINING", market: "MARKET", tasks: "TASKS", energy: "ENERGY", overdrive: "OVERDRIVE", 
+            sys: "SYSTEM", lang: "LANG", haptic: "HAPTIC", close: "CLOSE", loading: "CHARGE", ready: "READY!",
+            buy: "UPGRADE", cost: "COST", lvl: "LVL", power: "TAP POWER", inc: "INCOME", claim: "CLAIM", claimed: "DONE",
+            task1: "JOIN NEXUS HUB", task2: "INVITE 5 FRIENDS", task3: "REACH 100K N", top: "TOP MINERS", buyUSDT: "BUY USDT",
+            donateTitle: "DONATE USDT", donateDesc: "SUPPORT PROJECT DEVELOPMENT", copyBtn: "COPY ADDRESS",
+            daily: "DAILY REWARD", refTask: "INVITE FRIEND", refCopy: "INVITE", wait: "WAIT",
+            go: "GO", check: "CHECK", checking: "WAIT...", notSub: "NOT SUBSCRIBED!", lowBal: "NEED 100K ON BALANCE!",
+            chatTitle: "GLOBAL CHAT", chatLabel: "CHAT", chatPlace: "Enter message...", send: "SEND"
+        },
+        RU: {
+            mining: "МАЙНИНГ", market: "МАГАЗИН", tasks: "ЗАДАНИЯ", energy: "ЭНЕРГИЯ", overdrive: "БУСТ", 
+            sys: "СИСТЕМА", lang: "ЯЗЫК", haptic: "ВИБРО", close: "ЗАКРЫТЬ", loading: "ЗАРЯД", ready: "ГОТОВО!",
+            buy: "УЛУЧШИТЬ", cost: "ЦЕНА", lvl: "УР", power: "СИЛА КЛИКА", inc: "ДОХОД", claim: "ЗАБРАТЬ", claimed: "ГОТОВО",
+            task1: "ВСТУПИ В КАНАЛ", task2: "ПРИГЛАСИ 5 ДРУЗЕЙ", task3: "ДОСТИГНИ 100К N", top: "ЛИДЕРЫ", buyUSDT: "КУПИТЬ USDT",
+            donateTitle: "ПОДДЕРЖКА ПРОЕКТА", donateDesc: "ДОНАТ НА РАЗВИТИЕ NEXUS ENGINE", copyBtn: "КОПИРОВАТЬ АДРЕС",
+            daily: "ЕЖЕДНЕВНЫЙ БОНУС", refTask: "ПРИГЛАСИТЬ ДРУГА", refCopy: "ПРИГЛАСИТЬ", wait: "ОЖИДАНИЕ",
+            go: "ВЫПОЛНИТЬ", check: "ПРОВЕРИТЬ", checking: "ПРОВЕРКА...", notSub: "ТЫ НЕ ПОДПИСАН!", lowBal: "НУЖНО 100К НА БАЛАНСЕ!",
+            chatTitle: "ОБЩИЙ ЧАТ", chatLabel: "ЧАТ", chatPlace: "Ваше сообщение...", send: "ОТПРАВИТЬ"
+        }
+    };
 
     const RANKS = [
         { name: "ROOKIE", limit: 0 }, { name: "MINER", limit: 10000 }, { name: "PRO MINER", limit: 50000 },
@@ -384,8 +347,6 @@ window.deleteMsg = function(id) {
         document.getElementById('m-rank-title').innerText = L.top;
         document.getElementById('m-chat-title').innerText = L.chatTitle;
 
-        document.getElementById('lbl-desktop-title').innerText = langMap[currentLang].desktopTitle;
-        document.getElementById('lbl-sync-pc').innerText = langMap[currentLang].syncBtn;
         document.getElementById('lbl-lang').innerText = L.lang;
         document.getElementById('lbl-haptic').innerText = L.haptic;
         document.getElementById('lang-btn').innerText = currentLang;
@@ -692,31 +653,25 @@ window.deleteMsg = function(id) {
 
     window.openVpnApp = function() {
     const webapp = window.Telegram.WebApp;
+    // Берем данные напрямую из Telegram WebApp в момент клика
     const currentUser = webapp.initDataUnsafe?.user;
 
+    // Проверяем, что ID реально существует и это число/строка
     if (currentUser && currentUser.id) {
         webapp.HapticFeedback.impactOccurred('medium');
         
         const userId = String(currentUser.id);
         const userName = encodeURIComponent(currentUser.first_name || "User");
         
-        // 1. Ссылка для открытия ПРИЛОЖЕНИЯ (Deep Link)
-        // Она передаст ID прямо в твой Kotlin-код
-        const appUrl = `nexflow://open?TG_USER_ID=${userId}`;
+        // Формируем ссылку
+        // Исправленная ссылка (теперь Android её узнает)
+const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
         
-        // 2. Ссылка для открытия САЙТА (Запасная)
-        const webUrl = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
-        
-        // Сначала пробуем открыть приложение через кастомную схему
-        webapp.openLink(appUrl);
-
-        // Если через 500мс приложение не открылось (его нет), откроется сайт
-        setTimeout(() => {
-            webapp.openLink(webUrl);
-        }, 500);
-
+        // Открываем ссылку через официальный метод Telegram
+        webapp.openLink(url);
     } else {
-        webapp.showAlert("Ошибка: ID не найден.");
+        // Если данных нет, выводим ошибку, чтобы понять, что пошло не так
+        webapp.showAlert("Ошибка: Telegram не передал ваш ID. Попробуйте перезагрузить бота.");
     }
 };
 
