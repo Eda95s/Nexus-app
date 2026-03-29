@@ -1180,20 +1180,18 @@ window.saveData = function() {
         };
 
         // 2. Функция активации Alpha-Node (центральная кнопка)
-        window.claimAlphaStatus = function() {
+       window.claimAlphaStatus = function() {
             const btn = document.getElementById('alpha-node-btn');
             
-            // Если уже активировано - ничего не делаем
             if (btn && btn.classList.contains('activated')) return;
 
             tg.showConfirm("Активировать статус Alpha-Node? (2X доход)", (ok) => {
                 if (ok) {
-                    // Используем транзакцию, чтобы не превысить лимит в 1000 человек
                     db.ref('global/alphaNodesCount').transaction((count) => {
                         if ((count || 0) < 1000) {
                             return (count || 0) + 1;
                         }
-                        return; // Отмена, если места кончились
+                        return; 
                     }, (error, committed) => {
                         if (committed) {
                             db.ref('users/' + user.id).update({ 
@@ -1209,8 +1207,8 @@ window.saveData = function() {
                         }
                     });
                 }
-           };
-
+            }); // Исправлено: добавлена закрывающая скобка для showConfirm
+        };
         // Запускаем проверку счетчика при старте
         db.ref('global/alphaNodesCount').on('value', (snapshot) => {
             const count = snapshot.val() || 0;
