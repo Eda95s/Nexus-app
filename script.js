@@ -1006,17 +1006,27 @@ window.saveData = function() {
 
     // --- MAIN LOOP ---
     setInterval(() => {
-        let currentIncome = (upgrades.vpn.lvl * 2) / 10;
-        if (tasksDone.includes('invite')) currentIncome *= 1.5;
-        balance += currentIncome;
-        const now = Date.now();
-        const regenStep = (activeBoosts.speedEnd > now) ? 1.5 : 0.5;
-        if (energy < 1000) energy = Math.min(1000, energy + regenStep);
-        if (!isOverdrive && odCharge > 0 && (now - NexusGuard.lastClickTime > 2000)) {
-            odCharge = Math.max(0, odCharge - 0.3);
-        }
-        updateUI();
-    }, 100);
+    // 1. Считаем доход ТОЛЬКО для визуала (не прибавляем к balance!)
+    let currentIncome = (upgrades.vpn.lvl * 2) / 10;
+    if (tasksDone.includes('invite')) currentIncome *= 1.5;
+    
+    // СТРОКУ balance += currentIncome; МЫ УДАЛИЛИ. 
+    // Теперь за начисление отвечает Core.applyPassive() при входе и сервер.
+
+    const now = Date.now();
+
+    // 2. Логика регенерации энергии (оставляем как есть)
+    const regenStep = (activeBoosts.speedEnd > now) ? 1.5 : 0.5;
+    if (energy < 1000) energy = Math.min(1000, energy + regenStep);
+
+    // 3. Логика затухания Overdrive (оставляем как есть)
+    if (!isOverdrive && odCharge > 0 && (now - NexusGuard.lastClickTime > 2000)) {
+        odCharge = Math.max(0, odCharge - 0.3);
+    }
+
+    // 4. Обновляем интерфейс (он подтянет актуальный баланс)
+    updateUI();
+}, 100);
 
    // --- СЕКЦИЯ СОХРАНЕНИЯ (ВСТАВИТЬ В КОНЕЦ ФАЙЛА) ---
 
