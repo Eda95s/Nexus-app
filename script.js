@@ -901,54 +901,48 @@ window.saveData = function() {
     // 2. Работа с Firebase
     if (typeof db !== 'undefined' && user?.id) {
         db.ref('users/' + user.id).transaction((currentData) => {
-            
-            // ЕСЛИ ДАННЫХ НЕТ (Новый юзер) - создаем начальный объект
-            if (currentData === null) {
-                const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
-                return {
-                    balance: Math.floor(balance),
-                    energy: energy || 1000,
-                    name: fullName,
-                    username: fullName,
-                    v: GAME_VERSION,
-                    upgrades: upgrades || {
-                        node: { lvl: 1, cost: 45000, power: 1 },
-                        vpn: { lvl: 1, cost: 50000, income: 1 }
-                    },
-                    lastLogin: Date.now()
-                };
-            }
-
-            // ЕСЛИ ДАННЫЕ ЕСТЬ - СИНХРОНИЗИРУЕМ
-            // Проверяем, не намайнил ли VPN больше, пока кликер был выключен
-            if (currentData.balance > balance) {
-                balance = currentData.balance;
-            }
-            
-            // Обновляем поля
-            currentData.balance = Math.floor(balance);
-            currentData.energy = energy;
-            currentData.v = GAME_VERSION;
-            
-            const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
-            currentData.name = fullName;
-            currentData.username = fullName;
-            currentData.lastLogin = Date.now();
-            
-            // Важно: сохраняем уровни апгрейдов в базу, чтобы VPN их видел
-            currentData.upgrades = upgrades;
-
-            return currentData;
-        }, (error, committed, snapshot) => {
-            if (committed) {
-                updateUI();
-                console.log("✅ База обновлена. Баланс:", snapshot.val().balance);
-            } else if (error) {
-                console.error("❌ Ошибка транзакции:", error);
-            }
-        });
+    if (currentData === null) {
+        // Создание нового профиля
+        const fullName = (user.first_name || "") + (user.last_name ? " " + user.last_name : "");
+        return {
+            balance: Math.floor(balance),
+            energy: energy || 1000,
+            name: fullName,
+            username: fullName,
+            v: GAME_VERSION,
+            upgrades: upgrades,
+            lastLogin: Date.now()
+        };
     }
-};
+
+    // Синхронизация: если в базе больше денег (от VPN), берем их
+    // ВАЖНО: Мы не меняем глобальную переменную balance прямо тут!
+    let newBalance = Math.floor(balance);
+    if (currentData.balance > newBalance) {
+        newBalance = currentData.balance;
+    }
+
+    // Обновляем поля объекта
+    currentData.balance = newBalance;
+    currentData.energy = energy;
+    currentData.v = GAME_VERSION;
+    currentData.lastLogin = Date.now();
+    currentData.upgrades = upgrades;
+
+    return currentData;
+}, (error, committed, snapshot) => {
+    if (committed) {
+        // Вот здесь, ПОСЛЕ успешной транзакции, обновляем локальный баланс
+        const serverBalance = snapshot.val().balance;
+        if (serverBalance > balance) {
+            balance = serverBalance;
+        }
+        updateUI();
+        console.log("✅ Синхронизация успешна!");
+    } else if (error) {
+        console.error("❌ Ошибка транзакции:", error);
+    }
+});
     window.loadLeaderboard = function() {
         if (typeof db === 'undefined') return;
         const container = document.getElementById('leaderboard-list');
