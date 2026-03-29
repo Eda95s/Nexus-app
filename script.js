@@ -26,20 +26,33 @@ window.deleteMsg = function(id) {
     tg.expand();
     const user = tg.initDataUnsafe?.user;
 
-    // --- ШАГ 2: АВТОРИЗАЦИЯ (ВСТАВЛЯТЬ СЮДА) ---
-    firebase.auth().signInAnonymously()
-        .then(() => {
-            console.log("✅ Firebase Auth: Авторизован анонимно");
-            // После успешного входа запускаем синхронизацию данных
-            if (typeof syncUserWithDb === 'function') syncUserWithDb();
-        })
-        .catch((error) => {
-            console.error("❌ Firebase Auth Error:", error.code, error.message);
-        });
-    // -------------------------------------------
+    // Сначала ОБЪЯВЛЯЕМ функцию
+    function syncUserWithDb() {
+        if (!user || !user.id) return;
+        console.log("🔄 Запуск синхронизации...");
+        
+        const myId = user.id.toString();
+        const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
+        const userRef = db.ref('users/' + myId);
+        
+        // ... тут весь твой код функции syncUserWithDb ...
+    }
 
-    if (!user) {
-        console.error("Пользователь не найден! Откройте приложение через Telegram.");
+    // Теперь АВТОРИЗУЕМСЯ и вызываем её
+    if (typeof firebase.auth === 'function') {
+        firebase.auth().signInAnonymously()
+            .then(() => {
+                console.log("✅ Firebase Auth: Авторизован анонимно");
+                syncUserWithDb(); // Вызываем ТОЛЬКО здесь
+            })
+            .catch((error) => {
+                console.error("❌ Firebase Auth Error:", error.message);
+                // Если авторизация не удалась, всё равно пробуем (на случай если правила открыты)
+                syncUserWithDb(); 
+            });
+    } else {
+        console.error("❌ Скрипт Auth не подключен в index.html!");
+        syncUserWithDb();
     }
 
     // ==========================================
