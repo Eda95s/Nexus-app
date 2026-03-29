@@ -681,21 +681,33 @@ if (touchZone) {
     }
 
     window.startAutoInviteTask = function() {
-        copyRefLink();
-        const msg = currentLang === 'RU' ? "Ссылка скопирована!" : "Link copied!";
-        tg.showAlert(msg);
-        
-        if (typeof db !== 'undefined' && user?.id) {
-            const checkRef = setInterval(() => {
-                if (tasksDone.includes('invite')) { clearInterval(checkRef); return; }
-                db.ref('users/' + user.id + '/referrals_count').once('value', (snap) => {
-                    const count = snap.val() || 0;
-                    if (count >= 5) { grantReward('invite', 15000); clearInterval(checkRef); }
-                });
-            }, 10000);
-        }
-    };
+    copyRefLink();
+    const msg = currentLang === 'RU' ? "Ссылка скопирована!" : "Link copied!";
+    tg.showAlert(msg);
+    
+    // Если задание уже выполнено, ничего не делаем
+    if (tasksDone.includes('invite')) return;
 
+    if (typeof db !== 'undefined' && user?.id) {
+        // Проверяем количество рефералов разово при нажатии
+        db.ref('users/' + user.id + '/referrals_count').once('value', (snap) => {
+            const count = snap.val() || 0;
+            if (count >= 5) { 
+                grantReward('invite', 15000); 
+                tg.showAlert(currentLang === 'RU' ? "Задание выполнено! +15,000 N" : "Task completed! +15,000 N");
+            } else {
+                // Если рефералов мало, просто напоминаем условие
+                const left = 5 - count;
+                tg.showConfirm(currentLang === 'RU' 
+                    ? `Нужно еще ${left} рефералов для награды. Проверить еще раз?` 
+                    : `Need ${left} more referrals for reward. Check again?`, (ok) => {
+                        if (ok) startAutoInviteTask(); // Повторная проверка по желанию юзера
+                    });
+            }
+        });
+    }
+};
+    
     window.verifyTask = async function(id, reward) {
         const L = langMap[currentLang];
         const btn = document.getElementById(`check-${id}`);
