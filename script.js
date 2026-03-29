@@ -3,7 +3,7 @@
  * Version: 2.2.0_FIREBASE_ONLY
  */
 
-// Глобальная функция удаления сообщений
+// 1. Глобальная функция удаления сообщений (вне замыкания)
 window.deleteMsg = function(id) {
     if (!id) return;
     const tg = window.Telegram.WebApp;
@@ -27,25 +27,26 @@ window.deleteMsg = function(id) {
     const user = tg.initDataUnsafe?.user;
 
     // ==========================================
-    // 1. ПЕРЕМЕННЫЕ СОСТОЯНИЯ (Объявляем сразу)
+    // 1. ПЕРЕМЕННЫЕ СОСТОЯНИЯ (Глобальный доступ)
     // ==========================================
     const GAME_VERSION = "2.2.0_FIREBASE_ONLY"; 
     const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o";
     const CHANNEL_ID = "-1002086386401";
     const API_URL = "https://your-api-server.com"; 
 
-    let balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
-    let energy = parseInt(localStorage.getItem('nexus_energy')) || 1000;
+    // Используем window, чтобы нижние части скрипта видели актуальные данные
+    window.balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
+    window.energy = parseInt(localStorage.getItem('nexus_energy')) || 1000;
+    window.upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
+        node: { lvl: 1, cost: 45000, power: 1 },
+        vpn: { lvl: 0, cost: 50000, income: 1 }
+    };
+
     let accumulatedClicks = 0; 
     let odCharge = 0;
     let isOverdrive = false;
     let currentLang = localStorage.getItem('nx_lang') || 'EN';
     let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
-    
-    let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
-        node: { lvl: 1, cost: 45000, power: 1 },
-        vpn: { lvl: 0, cost: 50000, income: 1 }
-    };
 
     // ==========================================
     // 2. ФУНКЦИИ ЯДРА (СИНХРОНИЗАЦИЯ)
@@ -53,7 +54,7 @@ window.deleteMsg = function(id) {
 
     function syncUserWithDb() {
         if (!user || !user.id) return;
-        console.log("🔄 Запуск синхронизации с профилем: " + user.id);
+        console.log("🔄 Синхронизация с профилем: " + user.id);
         
         const myId = user.id.toString();
         const fullName = (user.first_name + (user.last_name ? " " + user.last_name : "")).trim() || "Miner";
@@ -68,15 +69,15 @@ window.deleteMsg = function(id) {
                 userRef.set({
                     username: fullName,
                     name: fullName,
-                    balance: balance,
-                    energy: energy,
+                    balance: window.balance,
+                    energy: window.energy,
                     maxEnergy: 1000, 
                     lastLogin: now,
                     v: GAME_VERSION,
-                    upgrades: upgrades
+                    upgrades: window.upgrades
                 });
             } else {
-                // СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ
+                // СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ (Приоритет данным из БД)
                 const lastLogin = data.lastLogin || now;
                 const secondsPassed = Math.floor((now - lastLogin) / 1000);
                 const recoveryRate = 1; 
@@ -84,12 +85,12 @@ window.deleteMsg = function(id) {
                 const maxEnergyInDb = data.maxEnergy || 1000;
                 const newEnergy = Math.min(maxEnergyInDb, (data.energy || 0) + (secondsPassed * recoveryRate));
 
-                // Обновляем локальные переменные из БД
-                balance = data.balance || 0; 
-                energy = newEnergy;
-                if (data.upgrades) upgrades = data.upgrades;
+                // Обновляем глобальные переменные
+                window.balance = data.balance || 0; 
+                window.energy = newEnergy;
+                if (data.upgrades) window.upgrades = data.upgrades;
 
-                // Сохраняем актуальное состояние
+                // Сохраняем актуальное состояние в БД
                 userRef.update({
                     username: fullName,
                     energy: newEnergy, 
@@ -97,7 +98,10 @@ window.deleteMsg = function(id) {
                     v: GAME_VERSION
                 });
 
-                if (typeof updateUI === 'function') updateUI();
+                // Безопасный вызов отрисовки интерфейса
+                if (typeof window.updateUI === 'function') {
+                    window.updateUI();
+                }
             }
             localStorage.setItem('nexus_user_name', fullName);
         });
@@ -118,34 +122,31 @@ window.deleteMsg = function(id) {
     if (typeof firebase.auth === 'function') {
         firebase.auth().signInAnonymously()
             .then(() => {
-                console.log("✅ Firebase Auth: Авторизован анонимно");
+                console.log("✅ Firebase Auth: Успешно");
                 checkFirebase();
                 syncUserWithDb(); 
-                // Здесь можно добавить вызовы loadChat() или loadLeaderboard(), если они есть дальше
+                
+                // Инициализация дополнительных модулей, если они есть
+                if (typeof window.loadChat === 'function') window.loadChat();
+                if (typeof window.loadLeaderboard === 'function') window.loadLeaderboard();
             })
             .catch((error) => {
                 console.error("❌ Firebase Auth Error:", error.message);
-                syncUserWithDb(); // Пробуем без авторизации (на случай открытых правил)
+                syncUserWithDb(); 
             });
     } else {
-        console.error("❌ Скрипт Auth не подключен!");
+        console.error("❌ Модуль Firebase Auth не найден!");
         syncUserWithDb();
     }
 
     // ==========================================
-    // 4. ОСТАЛЬНЫЕ ПЕРЕМЕННЫЕ И СИСТЕМЫ
+    // 4. СИСТЕМНЫЕ ПЕРЕМЕННЫЕ
     // ==========================================
 
-    function checkVersionReset() {
-        const savedVersion = localStorage.getItem('nexus_version');
-        if (savedVersion !== GAME_VERSION) {
-            localStorage.clear();
-            localStorage.setItem('nexus_version', GAME_VERSION);
-            return true;
-        }
-        return false;
+    if (localStorage.getItem('nexus_version') !== GAME_VERSION) {
+        localStorage.clear();
+        localStorage.setItem('nexus_version', GAME_VERSION);
     }
-    checkVersionReset();
 
     let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
     let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
@@ -153,10 +154,10 @@ window.deleteMsg = function(id) {
     let dailyStreak = parseInt(localStorage.getItem('nexus_streak')) || 0;
     let refClaimed = localStorage.getItem('nexus_ref_claimed') === 'true';
     let lastRankIndex = -1; 
-    let millionMilestone = Math.floor(balance / 1000000);
+    let millionMilestone = Math.floor(window.balance / 1000000);
     let taskTimers = {};
     let lastMessageTime = 0; 
-    const userId = user?.id || "unknown"; 
+    const userId = user?.id || "unknown";
 
     // --- ФУНКЦИЯ СИНХРОНИЗАЦИИ ---
     async function syncWithServer() {
