@@ -1054,7 +1054,7 @@ window.saveData = function() {
         // 1. Быстрое сохранение каждые 5 секунд
         setInterval(() => {
             saveData(); 
-        }, 5000); 
+        }, 20000); 
 
         // 2. Сохранение при сворачивании (для Telegram)
         tg.onEvent('viewportChanged', (isStateChanged) => {
