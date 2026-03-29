@@ -899,56 +899,47 @@ window.saveData = function() {
     localStorage.setItem('nexus_tasks', JSON.stringify(tasksDone));
     localStorage.setItem('nexus_active_boosts', JSON.stringify(activeBoosts));
     localStorage.setItem('nexus_last_time', Date.now());
-    localStorage.setItem('nexus_version', GAME_VERSION);
     localStorage.setItem('nexus_energy', energy);
-    localStorage.setItem('nexus_daily', lastDailyClaim);
-    localStorage.setItem('nexus_streak', dailyStreak);
 
     // 2. Работа с Firebase
     if (typeof db !== 'undefined' && user?.id) {
         db.ref('users/' + user.id).transaction((currentData) => {
-    if (currentData === null) {
-        // Создание нового профиля
-        const fullName = (user.first_name || "") + (user.last_name ? " " + user.last_name : "");
-        return {
-            balance: Math.floor(balance),
-            energy: energy || 1000,
-            name: fullName,
-            username: fullName,
-            v: GAME_VERSION,
-            upgrades: upgrades,
-            lastLogin: Date.now()
-        };
-    }
+            if (currentData === null) {
+                const fullName = (user.first_name || "") + (user.last_name ? " " + user.last_name : "");
+                return {
+                    balance: Math.floor(balance),
+                    energy: energy || 1000,
+                    name: fullName,
+                    v: GAME_VERSION,
+                    upgrades: upgrades,
+                    lastLogin: Date.now()
+                };
+            }
 
-    // Синхронизация: если в базе больше денег (от VPN), берем их
-    // ВАЖНО: Мы не меняем глобальную переменную balance прямо тут!
-    let newBalance = Math.floor(balance);
-    if (currentData.balance > newBalance) {
-        newBalance = currentData.balance;
-    }
+            let newBalance = Math.floor(balance);
+            if (currentData.balance > newBalance) {
+                newBalance = currentData.balance;
+            }
 
-    // Обновляем поля объекта
-    currentData.balance = newBalance;
-    currentData.energy = energy;
-    currentData.v = GAME_VERSION;
-    currentData.lastLogin = Date.now();
-    currentData.upgrades = upgrades;
+            currentData.balance = newBalance;
+            currentData.energy = energy;
+            currentData.v = GAME_VERSION;
+            currentData.lastLogin = Date.now();
+            currentData.upgrades = upgrades;
 
-    return currentData;
-}, (error, committed, snapshot) => {
-    if (committed) {
-        // Вот здесь, ПОСЛЕ успешной транзакции, обновляем локальный баланс
-        const serverBalance = snapshot.val().balance;
-        if (serverBalance > balance) {
-            balance = serverBalance;
-        }
-        updateUI();
-        console.log("✅ Синхронизация успешна!");
-    } else if (error) {
-        console.error("❌ Ошибка транзакции:", error);
+            return currentData;
+        }, (error, committed, snapshot) => {
+            if (committed) {
+                const serverBalance = snapshot.val().balance;
+                if (serverBalance > balance) {
+                    balance = serverBalance;
+                }
+                updateUI();
+                console.log("✅ Синхронизация успешна!");
+            }
+        });
     }
-});
+}; // <--- ЗДЕСЬ ТЫ ЗАБЫЛ ЗАКРЫТЬ saveData! Теперь функц
     window.loadLeaderboard = function() {
         if (typeof db === 'undefined') return;
         const container = document.getElementById('leaderboard-list');
