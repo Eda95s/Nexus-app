@@ -327,58 +327,82 @@ window.deleteMsg = function(id) {
     const NexusGuard = { lastClickTime: 0 };
 
     // --- CORE LOGIC ---
-    const Core = {
-        modifyBalance: function(amount) {
-            NexusShield.execute("Core_Balance", () => {
-                balance += amount;
-                if (balance < 0) balance = 0;
-                let currentMillion = Math.floor(balance / 1000000);
-                if(currentMillion > millionMilestone) {
-                    millionMilestone = currentMillion;
+   // --- CORE LOGIC ---
+const Core = {
+    modifyBalance: function(amount) {
+        // Добавляем проверку на существование щита, чтобы не было ошибок
+        const executor = (typeof NexusShield !== 'undefined') ? NexusShield.execute : (name, fn) => fn();
+
+        executor("Core_Balance", () => {
+            // ВАЖНО: используем window.balance, чтобы Firebase и UI видели изменения
+            window.balance = (window.balance || 0) + amount;
+            
+            if (window.balance < 0) window.balance = 0;
+
+            // Считаем миллионные вехи
+            let currentMillion = Math.floor(window.balance / 1000000);
+            if(typeof millionMilestone !== 'undefined' && currentMillion > millionMilestone) {
+                millionMilestone = currentMillion;
+                if (typeof NexusEvent !== 'undefined') {
                     NexusEvent.log(`MILESTONE: ${currentMillion}M N REACHED!`, `ДОСТИЖЕНИЕ: ${currentMillion}М N СОБРАНО!`);
                 }
-                updateUI();
-            });
-        },
-        consumeEnergy: function(amount) {
-            return NexusShield.execute("Core_Energy", () => {
-                if (energy >= amount) {
-                    energy -= amount;
-                    updateUI();
-                    return true;
-                }
-                return false;
-            });
-        },
-        applyPassive: function() {
-            // Добавляем проверку, чтобы скрипт не падал, если апгрейдов еще нет
-            if (upgrades && upgrades.vpn && upgrades.vpn.lvl > 0) {
-                const now = Date.now();
-                // Защита от NaN для lastTime
-                const last = lastTime || now; 
-                const diff = Math.floor((now - last) / 1000);
+            }
+            
+            if (typeof updateUI === 'function') updateUI();
+        });
+    },
+
+    consumeEnergy: function(amount) {
+        const executor = (typeof NexusShield !== 'undefined') ? NexusShield.execute : (name, fn) => fn();
+
+        return executor("Core_Energy", () => {
+            // Используем window.energy
+            if (window.energy >= amount) {
+                window.energy -= amount;
+                if (typeof updateUI === 'function') updateUI();
+                return true;
+            }
+            return false;
+        });
+    },
+
+    applyPassive: function() {
+        // Проверяем наличие объекта upgrades в window
+        const upg = window.upgrades || upgrades;
+        
+        if (upg && upg.vpn && upg.vpn.lvl > 0) {
+            const now = Date.now();
+            // Берем lastTime из window или localStorage
+            const last = window.lastTime || parseInt(localStorage.getItem('nexus_last_time')) || now; 
+            const diff = Math.floor((now - last) / 1000);
+            
+            // Считаем доход: уровень * 2 за каждую секунду
+            const earned = diff * (upg.vpn.lvl * 2);
+            
+            if (earned > 0) {
+                window.balance = (window.balance || 0) + earned;
                 
-                // Считаем доход
-                const earned = diff * (upgrades.vpn.lvl * 2);
+                const msg = (typeof currentLang !== 'undefined' && currentLang === 'RU') ? 
+                    `VPN намайнил: +${earned.toLocaleString()} N` : 
+                    `VPN mined: +${earned.toLocaleString()} N`;
                 
-                if (earned > 0) {
-                    balance += earned;
-                    const msg = currentLang === 'RU' ? 
-                        `VPN намайнил: +${earned.toLocaleString()} N` : 
-                        `VPN mined: +${earned.toLocaleString()} N`;
-                    
-                    tg.showAlert(msg);
+                if (typeof tg !== 'undefined' && tg.showAlert) tg.showAlert(msg);
+                
+                if (typeof NexusEvent !== 'undefined') {
                     NexusEvent.log(`Passive income: +${earned}`, `Пассивный доход: +${earned}`);
-                    
-                    // После начисления обновляем UI и сохраняем
-                    updateUI();
                 }
-            } else {
-                // Если у новичка еще нет уровней в базе, ставим хотя бы 0, чтобы не было ошибки
-                console.log("Майнинг пока не активен: уровень VPN 0 или не загружен");
-          }
-        } // ЗАКРЫЛИ ФУНКЦИЮ
-    }; // ЗАКРЫЛИ ОБЪЕКТ Core (ЭТОЙ СКОБКИ У ТЕБЯ НЕ ХВАТАЛО)
+                
+                if (typeof updateUI === 'function') updateUI();
+                
+                // Обновляем время последнего начисления
+                window.lastTime = now;
+                localStorage.setItem('nexus_last_time', now);
+            }
+        } else {
+            console.log("Пассивный майнинг пока не активен (уровень VPN: 0)");
+        }
+    }
+};
 
     const langMap = {
         EN: {
