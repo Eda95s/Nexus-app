@@ -1106,7 +1106,72 @@ window.saveData = function() {
         
         // syncWithServer(); <--- ЭТУ СТРОКУ Я УДАЛИЛ, ОНА БОЛЬШЕ НЕ НУЖНА
         
+        // ... твой предыдущий код (saveData, start_param и т.д.)
+
         updateUI(); 
         NexusEvent.log("System Online.", "Система онлайн.");
-    });
-})();
+
+        // ==========================================
+        // НОВЫЕ ФУНКЦИИ (ВСТАВЛЯТЬ СЮДА)
+        // ==========================================
+
+        // 1. Функция генерации кода для синхронизации с ПК
+        window.generateSyncCode = function() {
+            const userId = tg.initDataUnsafe?.user?.id;
+            if (!userId) return tg.showAlert("Ошибка: ID не найден");
+
+            const syncCode = Math.floor(100000 + Math.random() * 900000);
+            
+            db.ref('users/' + userId).update({
+                syncCode: syncCode,
+                syncTimestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                tg.HapticFeedback.notificationOccurred('success');
+                tg.showAlert("ВАШ КОД: " + syncCode + "\nВведите его в Nexus Core на ПК.");
+            });
+        };
+
+        // 2. Функция активации Alpha-Node (центральная кнопка)
+        window.claimAlphaStatus = function() {
+            const btn = document.getElementById('alpha-node-btn');
+            
+            // Если уже активировано - ничего не делаем
+            if (btn && btn.classList.contains('activated')) return;
+
+            tg.showConfirm("Активировать статус Alpha-Node? (2X доход)", (ok) => {
+                if (ok) {
+                    // Используем транзакцию, чтобы не превысить лимит в 1000 человек
+                    db.ref('global/alphaNodesCount').transaction((count) => {
+                        if ((count || 0) < 1000) {
+                            return (count || 0) + 1;
+                        }
+                        return; // Отмена, если места кончились
+                    }, (error, committed) => {
+                        if (committed) {
+                            db.ref('users/' + user.id).update({ 
+                                isAlphaNode: true,
+                                miningMultiplier: 2.0 
+                            }).then(() => {
+                                if (btn) btn.classList.add('activated');
+                                tg.HapticFeedback.notificationOccurred('success');
+                                tg.showAlert("СТАТУС АКТИВИРОВАН! 🚀\nТеперь ваш доход удвоен.");
+                            });
+                        } else {
+                            tg.showAlert("Извините, все 1000 мест уже заняты!");
+                        }
+                    });
+                }
+            });
+        };
+
+        // Запускаем проверку счетчика при старте
+        db.ref('global/alphaNodesCount').on('value', (snapshot) => {
+            const count = snapshot.val() || 0;
+            if (count >= 1000) {
+                const btn = document.getElementById('alpha-node-btn');
+                if (btn) btn.classList.add('activated'); // Серый цвет, если мест нет
+            }
+        });
+
+    }); // Закрытие блока инициализации базы
+})(); // Самый конец файла
