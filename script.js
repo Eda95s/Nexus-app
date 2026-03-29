@@ -26,11 +26,21 @@ window.deleteMsg = function(id) {
     tg.expand();
     const user = tg.initDataUnsafe?.user;
 
+    // --- ШАГ 2: АВТОРИЗАЦИЯ (ВСТАВЛЯТЬ СЮДА) ---
+    firebase.auth().signInAnonymously()
+        .then(() => {
+            console.log("✅ Firebase Auth: Авторизован анонимно");
+            // После успешного входа запускаем синхронизацию данных
+            if (typeof syncUserWithDb === 'function') syncUserWithDb();
+        })
+        .catch((error) => {
+            console.error("❌ Firebase Auth Error:", error.code, error.message);
+        });
+    // -------------------------------------------
+
     if (!user) {
-    console.error("Пользователь не найден! Откройте приложение через Telegram.");
-    // Для теста в браузере можно поставить заглушку:
-    // var user = { id: "5240434059", first_name: "Admin" }; 
-}
+        console.error("Пользователь не найден! Откройте приложение через Telegram.");
+    }
 
     // ==========================================
     // КОНФИГУРАЦИЯ
