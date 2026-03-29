@@ -583,7 +583,11 @@ if (touchZone) {
 
         for (let i = 0; i < points.length; i++) {
             let t = points[i];
-            let pwr = (upgrades.node.lvl * currentMult) * (isOverdrive ? 5 : 1);
+        // Проверяем множитель Alpha-Node (если его нет в системе, будет 1)
+        const alphaMult = window.userMultiplier || 1; 
+
+        // Умножаем финальную силу клика на этот множитель
+        let pwr = (upgrades.node.lvl * currentMult * (isOverdrive ? 5 : 1)) * alphaMult;
             
             // Шанс на крит
             if (Math.random() < 0.01) pwr *= 10;
