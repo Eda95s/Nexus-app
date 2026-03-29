@@ -836,18 +836,55 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
 };
 
     window.buyItem = function(type) {
-        let u = upgrades[type];
-        if (balance >= u.cost) {
-            balance -= u.cost; 
-            u.lvl++; 
-            if (type === 'node') u.cost = Math.floor(u.cost * 2.0);
-            else if (type === 'vpn') u.cost = Math.floor(u.cost * 3.5);
-            NexusEvent.log(`${type.toUpperCase()} Upgraded`, `${type.toUpperCase()} Улучшен`);
-            saveData(); updateUI();
-        } else { 
-            tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!"); 
+    if (!user || !user.id) return;
+    let u = upgrades[type];
+    
+    // Предварительная проверка на телефоне (чтобы не спамить запросами)
+    if (balance < u.cost) {
+        tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!");
+        return;
+    }
+
+    // БЕЗОПАСНАЯ ПОКУПКА ЧЕРЕЗ СЕРВЕР
+    db.ref('users/' + user.id).transaction((currentData) => {
+        if (currentData) {
+            const cost = u.cost;
+            // Проверяем реальный баланс в базе
+            if ((currentData.balance || 0) >= cost) {
+                // 1. Списываем монеты
+                currentData.balance -= cost;
+                
+                // 2. Увеличиваем уровень строго на +1 (как прописано в Rules)
+                if (!currentData.upgrades) currentData.upgrades = {};
+                if (!currentData.upgrades[type]) currentData.upgrades[type] = { lvl: 0 };
+                
+                currentData.upgrades[type].lvl += 1;
+                
+                // 3. Обновляем локальные переменные в самом приложении
+                balance = currentData.balance;
+                upgrades[type].lvl = currentData.upgrades[type].lvl;
+                
+                // 4. Пересчитываем стоимость для следующего раза
+                if (type === 'node') upgrades[type].cost = Math.floor(upgrades[type].cost * 2.0);
+                else upgrades[type].cost = Math.floor(upgrades[type].cost * 3.5);
+            } else {
+                // Если в базе денег меньше, чем кажется приложению — отменяем
+                return; 
+            }
         }
-    };
+        return currentData;
+    }, (error, committed) => {
+        if (committed) {
+            // Если база подтвердила покупку
+            tg.HapticFeedback.notificationOccurred('success');
+            saveData(); // Сохраняем новое состояние
+            updateUI(); // Обновляем экран (цифры баланса и уровня)
+            NexusEvent.log(`${type.toUpperCase()} Upgraded`, `${type.toUpperCase()} Улучшен`);
+        } else {
+            tg.showAlert(currentLang === 'RU' ? "Ошибка покупки или недостаточно средств!" : "Purchase error or insufficient funds!");
+        }
+    });
+};
 
 window.saveData = function() {
     // 1. Сохраняем локально
