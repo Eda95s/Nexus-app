@@ -198,9 +198,38 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 .sync-btn.ready { border-color: var(--cyan); color: #fff; box-shadow: 0 0 20px var(--cyan); }
 .sync-btn.active { background: var(--red); color: #fff; border-color: #fff; box-shadow: 0 0 30px var(--red); }
 
-/* МОДАЛЬНЫЕ ОКНА */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(15px); }
-.modal-content { background: #050a14; border: 1px solid var(--cyan); border-left: 6px solid var(--cyan); padding: 25px; border-radius: 20px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; }
+/* МОДАЛЬНЫЕ ОКНА - ИСПРАВЛЕНО ДЛЯ ПК И ТЕЛЕФОНА */
+.modal-overlay { 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(0,0,0,0.98); 
+    display: none; /* JS переключит на flex при клике */
+    justify-content: center; 
+    align-items: center; 
+    z-index: 9999 !important; /* Чтобы окно было ПОВЕРХ всего на ПК */
+    backdrop-filter: blur(15px); 
+    -webkit-backdrop-filter: blur(15px);
+}
+
+.modal-content { 
+    background: #050a14; 
+    border: 1px solid var(--cyan); 
+    border-left: 6px solid var(--cyan); 
+    padding: 25px; 
+    border-radius: 20px; 
+    width: 92%; 
+    max-width: 420px; /* Важно: чтобы на ПК окно не растягивалось на весь монитор */
+    max-height: 85vh; 
+    display: flex; 
+    flex-direction: column; 
+    position: relative; /* Для правильного позиционирования внутри */
+}
+
+/* Принудительное отображение, если JS добавил стиль flex */
+.modal-overlay[style*="display: flex"] {
+    display: flex !important;
+}
+
 .full-modal { height: 80vh; }
 
 /* ИСПРАВЛЕНО: Добавлен плавный скролл для iOS */
