@@ -577,44 +577,60 @@ window.deleteMsg = function(id) {
 const touchZone = document.getElementById('touch-zone');
 if (touchZone) {
     const handleMining = (e) => {
-        const points = e.changedTouches ? e.changedTouches : [e];
-        
-        // window.energy — используем глобальную энергию из базы
+        // 1. ПРОВЕРКА ЭНЕРГИИ
         if (window.energy < 2) return;
 
-        NexusGuard.lastClickTime = Date.now();
+        // 2. ОПРЕДЕЛЯЕМ ТОЧКИ КЛИКА (Массив для тача или один объект для мыши)
+        const points = e.changedTouches ? Array.from(e.changedTouches) : [e];
+        
         const coin = document.getElementById('coin-visual');
-        if(coin) coin.classList.add('pressed');
+        if(coin) {
+            coin.classList.remove('pressed'); // Сброс для повторной анимации
+            void coin.offsetWidth; // Магия для перезапуска CSS анимации
+            coin.classList.add('pressed');
+        }
 
         const now = Date.now();
-        const currentMult = (activeBoosts.multEnd > now) ? 2 : 1;
+        const currentMult = (window.activeBoosts && window.activeBoosts.multEnd > now) ? 2 : 1;
+        const alphaMult = window.userMultiplier || 1; 
 
+        // 3. ЦИКЛ ОБРАБОТКИ КЛИКОВ
         for (let i = 0; i < points.length; i++) {
             let t = points[i];
             
-            // Проверяем множитель Alpha-Node
-            const alphaMult = window.userMultiplier || 1; 
-
-            // window.upgrades — берем уровни из глобального объекта
-            let pwr = (window.upgrades.node.lvl * currentMult * (isOverdrive ? 5 : 1)) * alphaMult;
-                
-            if (Math.random() < 0.01) pwr *= 10;
+            // Считаем силу клика
+            let pwr = (window.upgrades.node.lvl * currentMult * (window.isOverdrive ? 5 : 1)) * alphaMult;
+            if (Math.random() < 0.01) pwr *= 10; // Крит 1%
             
-            // Вызываем методы ядра, они обновят window.balance внутри себя
-            Core.modifyBalance(pwr); 
-            Core.consumeEnergy(2);
+            // ОБНОВЛЯЕМ БАЛАНС И ЭНЕРГИЮ (Через window напрямую для надежности)
+            window.balance += pwr;
+            window.energy -= 2;
 
-            // window.accumulatedClicks — чтобы счетчик для сервера работал верно
+            // Накапливаем для отправки в Firebase
             window.accumulatedClicks = (window.accumulatedClicks || 0) + pwr;
 
-            if (!isOverdrive && odCharge < 100) odCharge += 0.4;
+            // Заряжаем овердрайв
+            if (!window.isOverdrive && window.odCharge < 100) {
+                window.odCharge += 0.4;
+            }
             
-            // Используем window.upgrades для определения критического попапа
-            createPop(t.clientX, t.clientY, pwr, pwr > window.upgrades.node.lvl * 2);
-            spawnParticles(t.clientX, t.clientY);
+            // 4. АНИМАЦИЯ (Проверка координат, чтобы не было ошибок)
+            const posX = t.pageX || t.clientX || (e.touches && e.touches[0] ? e.touches[0].pageX : 0);
+            const posY = t.pageY || t.clientY || (e.touches && e.touches[0] ? e.touches[0].pageY : 0);
+
+            if (typeof createPop === 'function') {
+                createPop(posX, posY, pwr, pwr > window.upgrades.node.lvl * 2);
+            }
+            if (typeof spawnParticles === 'function') {
+                spawnParticles(posX, posY);
+            }
         }
 
-        if (hapticEnabled) tg.HapticFeedback.impactOccurred('medium');
+        // 5. ОБНОВЛЯЕМ ИНТЕРФЕЙС И ХАПТИК
+        if (typeof updateUI === 'function') updateUI();
+        if (window.hapticEnabled && window.Telegram.WebApp.HapticFeedback) {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+        }
     };
 
     let isTouch = false;
@@ -626,14 +642,14 @@ if (touchZone) {
     }, {passive: false});
 
     touchZone.addEventListener('mousedown', (e) => {
-        if (isTouch) {
-            isTouch = false; 
-            return;
-        }
+        if (isTouch) return; // Игнорим мнимый клик после тача
         if (e.button === 0) handleMining(e);
     });
 
-    const releaseCoin = () => document.getElementById('coin-visual')?.classList.remove('pressed');
+    const releaseCoin = () => {
+        isTouch = false;
+        document.getElementById('coin-visual')?.classList.remove('pressed');
+    };
     touchZone.addEventListener('touchend', releaseCoin);
     window.addEventListener('mouseup', releaseCoin);
 }
