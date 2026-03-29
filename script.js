@@ -1209,8 +1209,7 @@ window.saveData = function() {
                         }
                     });
                 }
-            });
-        };
+           };
 
         // Запускаем проверку счетчика при старте
         db.ref('global/alphaNodesCount').on('value', (snapshot) => {
