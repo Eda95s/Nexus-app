@@ -420,3 +420,15 @@ body::before {
     text-shadow: 0 0 5px #00ff88;
     margin-bottom: 5px;
 }
+
+/* Разрешаем клики внутри модальных окон */
+.modal-content, .modal-content * {
+    pointer-events: auto !important;
+    user-select: none; /* Оставляем, чтобы текст не выделялся, но клик проходил */
+}
+
+/* Убираем задержку клика для кнопок покупки */
+.nexus-btn-buy, .nexus-btn-small, .close-btn-nexus {
+    cursor: pointer !important;
+    touch-action: manipulation !important;
+}
