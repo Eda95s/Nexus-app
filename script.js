@@ -935,18 +935,39 @@ window.saveData = function() {
     }
 
     window.toggleModal = function(id) {
-        const m = document.getElementById(id);
-        if(m) {
-            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-            if (id === 'rank-modal' && m.style.display === 'flex') loadLeaderboard();
-            if (id === 'chat-modal' && m.style.display === 'flex') {
+    const m = document.getElementById(id);
+    if(m) {
+        // Переключаем видимость
+        const isOpening = m.style.display !== 'flex';
+        m.style.display = isOpening ? 'flex' : 'none';
+
+        if (isOpening) {
+            // 1. Для лидерборда (у тебя было)
+            if (id === 'rank-modal') loadLeaderboard();
+
+            // 2. Для чата (у тебя было)
+            if (id === 'chat-modal') {
                 setTimeout(() => {
                     const c = document.getElementById('chat-messages');
                     if(c) c.scrollTop = c.scrollHeight;
                 }, 100);
             }
+
+            // 3. ДОБАВЛЯЕМ ДЛЯ МАГАЗИНА (Чтобы ожило на ПК)
+            if (id === 'market-modal') {
+                if (typeof renderMarket === 'function') renderMarket();
+            }
+
+            // 4. ДОБАВЛЯЕМ ДЛЯ ЗАДАНИЙ (Чтобы ожило на ПК)
+            if (id === 'tasks-modal') {
+                if (typeof renderTasks === 'function') renderTasks();
+            }
+            
+            // Виброотклик (безопасно для ПК)
+            try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
         }
-    };
+    }
+};
 
     window.changeLanguage = function() { 
         currentLang = currentLang === 'EN' ? 'RU' : 'EN'; 
