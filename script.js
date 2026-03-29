@@ -1,9 +1,9 @@
 /**
  * NEXFLOW VPN & MINING ENGINE - FULL MONOLITHIC CORE
- * Version: 2.2.0_FIREBASE_ONLY (800+ Lines Logic)
+ * Version: 2.2.0_FIREBASE_ONLY
  */
 
-// Самая первая строка файла - Глобальная функция удаления сообщений
+// Глобальная функция удаления сообщений
 window.deleteMsg = function(id) {
     if (!id) return;
     const tg = window.Telegram.WebApp;
@@ -26,117 +26,116 @@ window.deleteMsg = function(id) {
     tg.expand();
     const user = tg.initDataUnsafe?.user;
 
-    // Сначала ОБЪЯВЛЯЕМ функцию
-    function syncUserWithDb() {
-        if (!user || !user.id) return;
-        console.log("🔄 Запуск синхронизации...");
-        
-        const myId = user.id.toString();
-        const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
-        const userRef = db.ref('users/' + myId);
-        
-        // ... тут весь твой код функции syncUserWithDb ...
-    }
-
-    // Теперь АВТОРИЗУЕМСЯ и вызываем её
-    if (typeof firebase.auth === 'function') {
-        firebase.auth().signInAnonymously()
-            .then(() => {
-                console.log("✅ Firebase Auth: Авторизован анонимно");
-                syncUserWithDb(); // Вызываем ТОЛЬКО здесь
-            })
-            .catch((error) => {
-                console.error("❌ Firebase Auth Error:", error.message);
-                // Если авторизация не удалась, всё равно пробуем (на случай если правила открыты)
-                syncUserWithDb(); 
-            });
-    } else {
-        console.error("❌ Скрипт Auth не подключен в index.html!");
-        syncUserWithDb();
-    }
-
     // ==========================================
-    // КОНФИГУРАЦИЯ
+    // 1. ПЕРЕМЕННЫЕ СОСТОЯНИЯ (Объявляем сразу)
     // ==========================================
     const GAME_VERSION = "2.2.0_FIREBASE_ONLY"; 
     const BOT_TOKEN = "7544093954:AAH3H38R-o6v5rK6eHjK_X-Yy3vWk7E8K4o";
     const CHANNEL_ID = "-1002086386401";
-    const API_URL = "https://your-api-server.com"; // Добавлено для корректной работы syncWithServer
+    const API_URL = "https://your-api-server.com"; 
 
-    function checkFirebase() {
-        const connectedRef = firebase.database().ref(".info/connected");
-        connectedRef.on("value", (snap) => {
-            if (snap.val() === true) {
-                console.log("✅ СВЯЗЬ С FIREBASE УСТАНОВЛЕНА");
+    let balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
+    let energy = parseInt(localStorage.getItem('nexus_energy')) || 1000;
+    let accumulatedClicks = 0; 
+    let odCharge = 0;
+    let isOverdrive = false;
+    let currentLang = localStorage.getItem('nx_lang') || 'EN';
+    let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
+    
+    let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
+        node: { lvl: 1, cost: 45000, power: 1 },
+        vpn: { lvl: 0, cost: 50000, income: 1 }
+    };
+
+    // ==========================================
+    // 2. ФУНКЦИИ ЯДРА (СИНХРОНИЗАЦИЯ)
+    // ==========================================
+
+    function syncUserWithDb() {
+        if (!user || !user.id) return;
+        console.log("🔄 Запуск синхронизации с профилем: " + user.id);
+        
+        const myId = user.id.toString();
+        const fullName = (user.first_name + (user.last_name ? " " + user.last_name : "")).trim() || "Miner";
+        const userRef = db.ref('users/' + myId);
+        const now = Date.now(); 
+
+        userRef.once('value', (snapshot) => {
+            const data = snapshot.val();
+            
+            if (!data) {
+                // НОВЫЙ ПОЛЬЗОВАТЕЛЬ
+                userRef.set({
+                    username: fullName,
+                    name: fullName,
+                    balance: balance,
+                    energy: energy,
+                    maxEnergy: 1000, 
+                    lastLogin: now,
+                    v: GAME_VERSION,
+                    upgrades: upgrades
+                });
             } else {
-                console.error("❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ FIREBASE");
+                // СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ
+                const lastLogin = data.lastLogin || now;
+                const secondsPassed = Math.floor((now - lastLogin) / 1000);
+                const recoveryRate = 1; 
+                
+                const maxEnergyInDb = data.maxEnergy || 1000;
+                const newEnergy = Math.min(maxEnergyInDb, (data.energy || 0) + (secondsPassed * recoveryRate));
+
+                // Обновляем локальные переменные из БД
+                balance = data.balance || 0; 
+                energy = newEnergy;
+                if (data.upgrades) upgrades = data.upgrades;
+
+                // Сохраняем актуальное состояние
+                userRef.update({
+                    username: fullName,
+                    energy: newEnergy, 
+                    lastLogin: now,    
+                    v: GAME_VERSION
+                });
+
+                if (typeof updateUI === 'function') updateUI();
             }
+            localStorage.setItem('nexus_user_name', fullName);
         });
     }
-    checkFirebase();
 
-    // --- ВСТАВЛЯЙ СЮДА ---
-function syncUserWithDb() {
-    if (!user || !user.id) return;
+    function checkFirebase() {
+        const connectedRef = db.ref(".info/connected");
+        connectedRef.on("value", (snap) => {
+            if (snap.val() === true) console.log("✅ СВЯЗЬ С FIREBASE УСТАНОВЛЕНА");
+            else console.error("❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ");
+        });
+    }
 
-    const myId = user.id.toString();
-    const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
-    const userRef = db.ref('users/' + myId);
-    const now = Date.now(); 
-
-    userRef.once('value', (snapshot) => {
-        const data = snapshot.val();
-        
-        if (!data) {
-            // --- НОВЫЙ ПОЛЬЗОВАТЕЛЬ ---
-            userRef.set({
-                username: fullName,
-                name: fullName,
-                balance: 0,
-                energy: 1000,
-                maxEnergy: 1000, 
-                lastLogin: now,
-                v: GAME_VERSION,
-                upgrades: {
-                    node: { lvl: 1, cost: 45000, power: 1 },
-                    vpn: { lvl: 0, cost: 50000, income: 1 } 
-                }
-            });
-        } else {
-            // --- СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ ---
-            const lastLogin = data.lastLogin || now;
-            const secondsPassed = Math.floor((now - lastLogin) / 1000);
-            
-            // Настройка скорости: 1 единица в секунду
-            const recoveryRate = 1; 
-            const energyGained = secondsPassed * recoveryRate;
-            
-            const maxEnergyInDb = data.maxEnergy || 1000;
-            const newEnergy = Math.min(maxEnergyInDb, (data.energy || 0) + energyGained);
-
-            // 1. Обновляем глобальные переменные твоего скрипта
-            energy = newEnergy; 
-            balance = data.balance || 0; 
-
-            // 2. Отправляем обновленные данные в Firebase
-            userRef.update({
-                username: fullName,
-                name: fullName,
-                energy: newEnergy, 
-                lastLogin: now,    
-                v: GAME_VERSION
-            });
-
-            // 3. Принудительно обновляем экран
-            if (typeof updateUI === 'function') {
-                updateUI();
-            }
-        }
-        localStorage.setItem('nexus_user_name', fullName);
-    });
-}
-syncUserWithDb();
+    // ==========================================
+    // 3. ЗАПУСК ЧЕРЕЗ АВТОРИЗАЦИЮ
+    // ==========================================
     
+    if (typeof firebase.auth === 'function') {
+        firebase.auth().signInAnonymously()
+            .then(() => {
+                console.log("✅ Firebase Auth: Авторизован анонимно");
+                checkFirebase();
+                syncUserWithDb(); 
+                // Здесь можно добавить вызовы loadChat() или loadLeaderboard(), если они есть дальше
+            })
+            .catch((error) => {
+                console.error("❌ Firebase Auth Error:", error.message);
+                syncUserWithDb(); // Пробуем без авторизации (на случай открытых правил)
+            });
+    } else {
+        console.error("❌ Скрипт Auth не подключен!");
+        syncUserWithDb();
+    }
+
+    // ==========================================
+    // 4. ОСТАЛЬНЫЕ ПЕРЕМЕННЫЕ И СИСТЕМЫ
+    // ==========================================
+
     function checkVersionReset() {
         const savedVersion = localStorage.getItem('nexus_version');
         if (savedVersion !== GAME_VERSION) {
@@ -146,33 +145,13 @@ syncUserWithDb();
         }
         return false;
     }
+    checkVersionReset();
 
-    const isWasReset = checkVersionReset();
-    
-    let balance = parseFloat(localStorage.getItem('nexus_bal')) || 0;
-    let accumulatedClicks = 0; 
     let lastTime = parseInt(localStorage.getItem('nexus_last_time')) || Date.now();
-    let upgrades = JSON.parse(localStorage.getItem('nexus_upgrades')) || {
-        node: { lvl: 1, cost: 45000, power: 1 },
-        vpn: { lvl: 0, cost: 50000, income: 1 }
-    };
-
-    let activeBoosts = JSON.parse(localStorage.getItem('nexus_active_boosts')) || {
-        multEnd: 0,
-        speedEnd: 0
-    };
-
     let tasksDone = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
-    let energy = parseInt(localStorage.getItem('nexus_energy')) || 1000;
-    let odCharge = 0;
-    let isOverdrive = false;
-    let currentLang = localStorage.getItem('nx_lang') || 'EN';
-    let hapticEnabled = localStorage.getItem('nx_haptic') !== 'off';
-
     let lastDailyClaim = parseInt(localStorage.getItem('nexus_daily')) || 0;
     let dailyStreak = parseInt(localStorage.getItem('nexus_streak')) || 0;
     let refClaimed = localStorage.getItem('nexus_ref_claimed') === 'true';
-
     let lastRankIndex = -1; 
     let millionMilestone = Math.floor(balance / 1000000);
     let taskTimers = {};
