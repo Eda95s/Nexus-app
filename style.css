@@ -233,7 +233,21 @@ body { margin: 0; background: var(--bg); font-family: 'Orbitron'; color: white; 
 .full-modal { height: 80vh; }
 
 /* ИСПРАВЛЕНО: Добавлен плавный скролл для iOS */
-.item-grid { overflow-y: auto; flex-grow: 1; padding-right: 5px; -webkit-overflow-scrolling: touch; }
+.item-grid { 
+    overflow-y: auto; 
+    flex-grow: 1; 
+    padding-right: 15px !important; /* Больше места, чтобы скроллбар не мешал кнопкам */
+    -webkit-overflow-scrolling: touch; 
+    position: relative;
+    z-index: 10;
+    pointer-events: auto !important;
+}
+
+/* Убираем возможную невидимую стену от спецэффектов */
+.vignette-effect, .scanline { 
+    pointer-events: none !important; 
+    z-index: 500 !important; /* Опускаем ниже окон */
+}
 
 .card-nexus { 
     background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); 
