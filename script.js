@@ -47,39 +47,55 @@ window.deleteMsg = function(id) {
     checkFirebase();
 
     // --- ВСТАВЛЯЙ СЮДА ---
-   function syncUserWithDb() {
+  function syncUserWithDb() {
     if (!user || !user.id) return;
 
     const myId = user.id.toString();
     const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
     const userRef = db.ref('users/' + myId);
+    const now = Date.now(); // Текущее время
 
     userRef.once('value', (snapshot) => {
         const data = snapshot.val();
         
         if (!data) {
-            // --- НОВЫЙ ПОЛЬЗОВАТЕЛЬ: Создаем полный набор данных ---
+            // --- НОВЫЙ ПОЛЬЗОВАТЕЛЬ ---
             userRef.set({
                 username: fullName,
                 name: fullName,
                 balance: 0,
-                energy: 1000,        // Начальная энергия
-                lastLogin: Date.now(),
+                energy: 1000,
+                maxEnergy: 1000, // Добавим лимит в базу
+                lastLogin: now,
                 v: GAME_VERSION,
-                // Добавляем уровни прокачки, чтобы майнинг в VPN не выдавал NaN
                 upgrades: {
                     node: { lvl: 1, cost: 45000, power: 1 },
                     vpn: { lvl: 0, cost: 50000, income: 1 } 
                 }
             });
         } else {
-            // --- СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ: Обновляем только имя и версию ---
+            // --- СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ: РАСЧЕТ ЭНЕРГИИ ---
+            const lastLogin = data.lastLogin || now;
+            const secondsPassed = Math.floor((now - lastLogin) / 1000);
+            
+            // Настройка скорости: например, 1 единица в секунду
+            const recoveryRate = 1; 
+            const energyGained = secondsPassed * recoveryRate;
+            
+            // Новый уровень энергии (не больше 1000 или maxEnergy)
+            const maxEnergy = data.maxEnergy || 1000;
+            const newEnergy = Math.min(maxEnergy, (data.energy || 0) + energyGained);
+
             userRef.update({
                 username: fullName,
                 name: fullName,
-                lastLogin: Date.now(),
+                energy: newEnergy, // Сохраняем восстановленную энергию
+                lastLogin: now,    // Обновляем время входа
                 v: GAME_VERSION
             });
+            
+            // Если у тебя есть глобальная переменная в JS для энергии, обнови и её
+            // currentEnergy = newEnergy; 
         }
         localStorage.setItem('nexus_user_name', fullName);
     });
