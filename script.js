@@ -47,13 +47,13 @@ window.deleteMsg = function(id) {
     checkFirebase();
 
     // --- ВСТАВЛЯЙ СЮДА ---
-  function syncUserWithDb() {
+function syncUserWithDb() {
     if (!user || !user.id) return;
 
     const myId = user.id.toString();
     const fullName = user.first_name + (user.last_name ? " " + user.last_name : "");
     const userRef = db.ref('users/' + myId);
-    const now = Date.now(); // Текущее время
+    const now = Date.now(); 
 
     userRef.once('value', (snapshot) => {
         const data = snapshot.val();
@@ -65,7 +65,7 @@ window.deleteMsg = function(id) {
                 name: fullName,
                 balance: 0,
                 energy: 1000,
-                maxEnergy: 1000, // Добавим лимит в базу
+                maxEnergy: 1000, 
                 lastLogin: now,
                 v: GAME_VERSION,
                 upgrades: {
@@ -74,28 +74,34 @@ window.deleteMsg = function(id) {
                 }
             });
         } else {
-            // --- СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ: РАСЧЕТ ЭНЕРГИИ ---
+            // --- СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ ---
             const lastLogin = data.lastLogin || now;
             const secondsPassed = Math.floor((now - lastLogin) / 1000);
             
-            // Настройка скорости: например, 1 единица в секунду
+            // Настройка скорости: 1 единица в секунду
             const recoveryRate = 1; 
             const energyGained = secondsPassed * recoveryRate;
             
-            // Новый уровень энергии (не больше 1000 или maxEnergy)
-            const maxEnergy = data.maxEnergy || 1000;
-            const newEnergy = Math.min(maxEnergy, (data.energy || 0) + energyGained);
+            const maxEnergyInDb = data.maxEnergy || 1000;
+            const newEnergy = Math.min(maxEnergyInDb, (data.energy || 0) + energyGained);
 
+            // 1. Обновляем глобальные переменные твоего скрипта
+            energy = newEnergy; 
+            balance = data.balance || 0; 
+
+            // 2. Отправляем обновленные данные в Firebase
             userRef.update({
                 username: fullName,
                 name: fullName,
-                energy: newEnergy, // Сохраняем восстановленную энергию
-                lastLogin: now,    // Обновляем время входа
+                energy: newEnergy, 
+                lastLogin: now,    
                 v: GAME_VERSION
             });
-            
-            // Если у тебя есть глобальная переменная в JS для энергии, обнови и её
-            // currentEnergy = newEnergy; 
+
+            // 3. Принудительно обновляем экран
+            if (typeof updateUI === 'function') {
+                updateUI();
+            }
         }
         localStorage.setItem('nexus_user_name', fullName);
     });
