@@ -432,3 +432,8 @@ body::before {
     cursor: pointer !important;
     touch-action: manipulation !important;
 }
+.nexus-btn-buy, .nexus-btn-small, .close-btn-nexus {
+    position: relative;
+    z-index: 10000 !important; /* Выше самой модалки */
+    pointer-events: auto !important;
+}
