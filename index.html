@@ -35,26 +35,6 @@
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
-      // --- ИСПРАВЛЕНИЕ: Функция инициализации пользователя в БД ---
-      // Без этого лидерборд будет пуст
-      function initUserInDb() {
-          const user = tg.initDataUnsafe?.user;
-          if (user) {
-              const userRef = db.ref('users/' + user.id);
-              userRef.once('value', (snapshot) => {
-                  if (!snapshot.exists()) {
-                      userRef.set({
-                          username: user.first_name || "Miner",
-                          balance: 0,
-                          lastLogin: Date.now()
-                      });
-                  }
-              });
-          }
-      }
-      // Запускаем при старте
-      initUserInDb();
-
       // --- ФУНКЦИЯ ДЛЯ ПЕРЕХОДА В VPN ---
       window.openVpnApp = function() {
         const user = tg.initDataUnsafe?.user;
