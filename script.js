@@ -934,38 +934,32 @@ window.saveData = function() {
         });
     }
 
-    window.toggleModal = function(id) {
+   window.toggleModal = function(id) {
     const m = document.getElementById(id);
-    if(m) {
-        // Переключаем видимость
-        const isOpening = m.style.display !== 'flex';
-        m.style.display = isOpening ? 'flex' : 'none';
+    if (!m) return;
 
-        if (isOpening) {
-            // 1. Для лидерборда (у тебя было)
-            if (id === 'rank-modal') loadLeaderboard();
+    // Проверяем: если сейчас НЕ flex, значит надо открыть
+    const isOpening = m.style.display !== 'flex';
 
-            // 2. Для чата (у тебя было)
-            if (id === 'chat-modal') {
-                setTimeout(() => {
-                    const c = document.getElementById('chat-messages');
-                    if(c) c.scrollTop = c.scrollHeight;
-                }, 100);
-            }
+    if (isOpening) {
+        m.style.display = 'flex';
+        
+        // Принудительная отрисовка контента
+        if (id === 'market-modal' && typeof renderMarket === 'function') renderMarket();
+        if (id === 'tasks-modal' && typeof renderTasks === 'function') renderTasks();
+        if (id === 'rank-modal') loadLeaderboard();
 
-            // 3. ДОБАВЛЯЕМ ДЛЯ МАГАЗИНА (Чтобы ожило на ПК)
-            if (id === 'market-modal') {
-                if (typeof renderMarket === 'function') renderMarket();
-            }
-
-            // 4. ДОБАВЛЯЕМ ДЛЯ ЗАДАНИЙ (Чтобы ожило на ПК)
-            if (id === 'tasks-modal') {
-                if (typeof renderTasks === 'function') renderTasks();
-            }
-            
-            // Виброотклик (безопасно для ПК)
-            try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
+        if (id === 'chat-modal') {
+            setTimeout(() => {
+                const c = document.getElementById('chat-messages');
+                if(c) c.scrollTop = c.scrollHeight;
+            }, 100);
         }
+
+        try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
+    } else {
+        // Если уже был flex — просто закрываем
+        m.style.display = 'none';
     }
 };
 
