@@ -1055,20 +1055,33 @@ window.saveData = function() {
     document.addEventListener('DOMContentLoaded', () => { 
         if(isWasReset) tg.showAlert("NEXUS: Система обновлена!");
 
-        // --- ДОБАВЬ ЭТОТ БЛОК ТУТ ---
+       // --- ОБНОВЛЕННЫЙ БЛОК: СИНХРОНИЗАЦИЯ БАЛАНСА И СТАТУСА ---
         if (user?.id) {
-            db.ref('users/' + user.id + '/balance').on('value', (snapshot) => {
-                const newBalance = snapshot.val();
-                if (newBalance !== null) {
-                    // Если в базе число больше (намайнил VPN), обновляем сайт
-                    if (newBalance > balance) {
-                        balance = newBalance;
+            // Слушаем всю ветку пользователя, а не только balance
+            db.ref('users/' + user.id).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // 1. Синхронизация баланса
+                    if (data.balance !== undefined && data.balance > balance) {
+                        balance = data.balance;
                         updateUI(); 
+                    }
+
+                    // 2. ПОДТЯГИВАЕМ МНОЖИТЕЛЬ (x2 для Альфы)
+                    // Теперь переменная window.userMultiplier всегда актуальна
+                    window.userMultiplier = data.miningMultiplier || 1.0;
+
+                    // 3. ВИЗУАЛ: Если статус уже есть, красим центральную кнопку
+                    if (data.isAlphaNode === true) {
+                        const alphaBtn = document.getElementById('alpha-node-btn');
+                        if (alphaBtn) {
+                            alphaBtn.classList.add('activated'); // Станет серой и неактивной
+                        }
                     }
                 }
             });
         }
-        // ----------------------------
+        // -----------------------------------------------------
 
         // 1. Быстрое сохранение каждые 5 секунд
         setInterval(() => {
