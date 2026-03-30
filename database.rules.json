@@ -1,0 +1,21 @@
+﻿{
+  "rules": {
+    "global": {
+      ".read": "true",
+      ".write": "auth != null"
+    },
+    "chat": {
+      ".read": "true",
+      "$msgId": {
+        ".write": "data.val() == null && newData.val() != null",
+        ".remove": "data.child('userId').val() == auth.uid"
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "true",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
