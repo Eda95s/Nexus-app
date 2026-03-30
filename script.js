@@ -23,6 +23,11 @@ window.deleteMsg = function(id) {
 (function() { 
     const tg = window.Telegram.WebApp;
     const db = firebase.database();
+    firebase.auth().signInAnonymously().then(() => {
+    console.log("Вход выполнен, теперь правила Rules тебя узнают!");
+}).catch((error) => {
+    console.error("Ошибка входа:", error.message);
+});
     tg.expand();
     const user = tg.initDataUnsafe?.user;
 
