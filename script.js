@@ -834,15 +834,43 @@ const url = `https://nexus-app-6769e.web.app/vpn?id=${userId}&user=${userName}`;
     }
 };
 
-    window.buyItem = function(type) {
+   window.buyItem = function(type) {
         let u = upgrades[type];
+        
         if (balance >= u.cost) {
-            balance -= u.cost; 
-            u.lvl++; 
-            if (type === 'node') u.cost = Math.floor(u.cost * 2.0);
-            else if (type === 'vpn') u.cost = Math.floor(u.cost * 3.5);
-            NexusEvent.log(`${type.toUpperCase()} Upgraded`, `${type.toUpperCase()} Улучшен`);
-            saveData(); updateUI();
+            // 1. Рассчитываем новые значения заранее
+            const oldCost = u.cost;
+            const newBalance = Math.floor(balance - oldCost);
+            const newLevel = u.lvl + 1;
+            
+            // Твоя логика роста цены
+            let newCost;
+            if (type === 'node') newCost = Math.floor(oldCost * 2.0);
+            else if (type === 'vpn') newCost = Math.floor(oldCost * 3.5);
+            else newCost = Math.floor(oldCost * 1.5);
+
+            // 2. Формируем объект для базы данных
+            const updates = {};
+            updates[`users/${user.id}/balance`] = newBalance;
+            updates[`users/${user.id}/upgrades/${type}/lvl`] = newLevel;
+            updates[`users/${user.id}/upgrades/${type}/cost`] = newCost;
+
+            // 3. Отправляем АТОМАРНО (всё или ничего)
+            db.ref().update(updates).then(() => {
+                // Только если база подтвердила успех, обновляем экран игрока
+                balance = newBalance;
+                u.lvl = newLevel;
+                u.cost = newCost;
+
+                NexusEvent.log(`${type.toUpperCase()} Upgraded`, `${type.toUpperCase()} Улучшен`);
+                tg.HapticFeedback.notificationOccurred('success');
+                renderMarket(); // Перерисовываем кнопки в магазине
+                updateUI();
+            }).catch((error) => {
+                // Сюда попадем, если Firebase Rules заблокировали транзакцию
+                tg.showAlert(currentLang === 'RU' ? "Ошибка транзакции!" : "Transaction error!");
+                console.error("Security Block:", error);
+            });
         } else { 
             tg.showAlert(currentLang === 'RU' ? "Недостаточно N!" : "Not enough N!"); 
         }
